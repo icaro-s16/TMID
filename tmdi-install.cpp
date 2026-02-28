@@ -28,7 +28,8 @@ bool install_tmid(const std::filesystem::path& binary_path) {
 }
 
 int main(int argc, char* argv[]) {
-    // We assume the binary is in TMID/src/tmid relative to where the installer is run
+    
+    // Assuming the binary is in TMID/build/tmid relative to where the installer is run
     std::filesystem::path project_root = std::filesystem::current_path();
     std::filesystem::path tmid_binary = project_root / "build" / "tmid";
 
