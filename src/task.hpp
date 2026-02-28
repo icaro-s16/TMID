@@ -1,15 +1,21 @@
 #ifndef TASK_HPP
 #define TASK_HPP
 
-struct Task {
-    const char* name;
-    const char* description;
+#include <string>
 
-    /* _n: task's name, _d: description */
-    Task(
-        const char* _n,
-        const char* _d
-    ) : name(_n), description(_d) {}
+struct Task {
+    std::string name;
+    std::string description;
+
+    /* _n: task's name */
+    void set_name(const std::string& _n) {
+        name = _n;
+    }
+
+    /* _d: description */
+    void set_description(const std::string& _d) {
+        description = _d;
+    }
 };
 
 #endif

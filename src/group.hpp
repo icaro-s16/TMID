@@ -2,16 +2,43 @@
 #define GROUP_HPP
 
 #include <map>
+#include <string>
+#include <sstream>
+#include <string>
+#include <algorithm>
+
+#include "utils.hpp"
 
 struct Group {
-    const char* name;
-    const std::map<unsigned short int, const char *> participants;
+    std::string name;
+    std::map<std::string, std::string> participants;
 
-    /* _n: group's name, _p: participants */
-    Group(
-        const char* _n,
-        const std::map<unsigned short int, const char *> _p
-    ) : name(_n), participants(_p) {}
+    /* _n: group's name */
+    void set_name(std::string _n) {
+        name = _n;
+    }
+
+    /* _p: participants in the format "id:name,id:name,id:name" */
+    void set_participants_from_string(const std::string& _p) {
+        
+        std::stringstream ss(_p);
+        std::string item;
+
+        while (std::getline(ss, item, ',')) {
+            if (item.empty()) continue;
+
+            size_t colon_pos = item.find(':');
+            if (colon_pos != std::string::npos) {
+                std::string id = item.substr(0, colon_pos);
+                std::string name = item.substr(colon_pos + 1);
+
+                id = strutils::trim(id);
+                name = strutils::trim(name);
+                
+                participants[id] = name;
+            }
+        }
+    }
 };
 
 #endif

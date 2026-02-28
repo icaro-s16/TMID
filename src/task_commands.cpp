@@ -30,3 +30,35 @@ void task::set_config_file(std::ofstream &config_file)
 
     config_file.close();
 }
+
+std::unique_ptr<Task> task::read_task_config()
+{
+    std::ifstream config_file(TASK_CONFIG_FILE_NAME);
+    if (!config_file.is_open()) {
+        std::cerr << "task config file is not present or could not be opened.\n";
+        throw std::runtime_error("Could not open task config file");
+    }
+
+    std::unique_ptr<Task> read_task = std::unique_ptr<Task>();
+
+    std::string line;
+    while (config_file >> line) {
+        if (line.empty() || line[0] == '#') continue;
+
+        size_t delimiter_pos = line.find('=');
+        if (delimiter_pos == std::string::npos) continue;
+
+        std::string key = line.substr(0, delimiter_pos);
+        std::string value = line.substr(delimiter_pos + 1);
+        if (key == "task_name") {
+            read_task->set_name(value); 
+        } 
+        else if (key == "description") {
+            read_task->set_description(value);
+        } else {
+            std::cerr << "key '" << key << "' not recognized. Skipping line\n" << std::endl;
+        }
+    }
+
+    return read_task;
+}
