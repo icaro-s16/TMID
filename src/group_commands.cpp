@@ -4,15 +4,15 @@
 void group::create_group_config_file()
 {
     if (std::filesystem::exists(GROUP_CONFIG_FILE_NAME)) {
-        std::cout << GROUP_CONFIG_FILE_NAME << " exists. Aborting file creation" <<std::endl;
+        std::cerr << GROUP_CONFIG_FILE_NAME << " exists. Aborting file creation" <<std::endl;
         return;
     }
 
     std::ofstream config_file(GROUP_CONFIG_FILE_NAME);
     if (config_file.is_open()) {
-        std::cout << "group created at " << std::filesystem::current_path() << std::endl;
+        std::clog << "[LOG] Group created at " << std::filesystem::current_path() << std::endl;
     } else {
-        throw std::runtime_error("failed to create group config file");
+        throw std::runtime_error("Failed to create group config file");
     }
 
     set_config_file(config_file);
@@ -34,32 +34,45 @@ void group::set_config_file(std::ofstream& config_file)
 
 std::unique_ptr<Group> group::read_group_config()
 {
+    std::clog << "[LOG] Attempting to open config file: " << GROUP_CONFIG_FILE_NAME << std::endl;
+    
     std::ifstream config_file(GROUP_CONFIG_FILE_NAME);
     if (!config_file.is_open()) {
-        std::cerr << "group config file is not present or could not be opened.\n";
+        std::cerr << "[ERROR] Group config file is not present or could not be opened: " << GROUP_CONFIG_FILE_NAME << std::endl;
         throw std::runtime_error("Could not open group config file");
     }
 
-    std::unique_ptr<Group> read_group = std::unique_ptr<Group>();
-
+    auto read_group = std::make_unique<Group>();
     std::string line;
-    while (config_file >> line) {
+    int line_count = 0;
+
+    while (std::getline(config_file, line)) {
+        line_count++;
+        
+        // Basic sanitization
         if (line.empty() || line[0] == '#') continue;
 
         size_t delimiter_pos = line.find('=');
-        if (delimiter_pos == std::string::npos) continue;
+        if (delimiter_pos == std::string::npos) {
+            std::clog << "[WARN] Line " << line_count << ": Missing '=' delimiter. Skipping." << std::endl;
+            continue;
+        }
 
         std::string key = line.substr(0, delimiter_pos);
         std::string value = line.substr(delimiter_pos + 1);
+
         if (key == "group_name") {
+            std::clog << "[LOG] Setting group name to: " << value << std::endl;
             read_group->set_name(value); 
         } 
         else if (key == "participants") {
+            std::clog << "[LOG] Loading participants list..." << std::endl;
             read_group->set_participants_from_string(value);
         } else {
-            std::cerr << "key '" << key << "' not recognized. Skipping line\n" << std::endl;
+            std::cerr << "[WARN] Key '" << key << "' at line " << line_count << " not recognized. Skipping." << std::endl;
         }
     }
 
+    std::clog << "[LOG] Successfully finished parsing " << GROUP_CONFIG_FILE_NAME << std::endl;
     return read_group;
 }

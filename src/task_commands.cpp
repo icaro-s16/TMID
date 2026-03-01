@@ -32,32 +32,47 @@ void task::set_config_file(std::ofstream &config_file)
 
 std::unique_ptr<Task> task::read_task_config()
 {
+    std::clog << "[LOG] Attempting to open config file: " << TASK_CONFIG_FILE_NAME << std::endl;
+
     std::ifstream config_file(TASK_CONFIG_FILE_NAME);
     if (!config_file.is_open()) {
-        std::cerr << "task config file is not present or could not be opened.\n";
+        std::cerr << "[ERROR] Task config file is not present or could not be opened: " << TASK_CONFIG_FILE_NAME << std::endl;
         throw std::runtime_error("Could not open task config file");
     }
 
-    std::unique_ptr<Task> read_task = std::unique_ptr<Task>();
-
+    // Initialize the object so we can actually call methods on it
+    auto read_task = std::make_unique<Task>();
+    
     std::string line;
-    while (config_file >> line) {
+    int line_num = 0;
+
+    // Using std::getline to ensure we don't stop at spaces in descriptions
+    while (std::getline(config_file, line)) {
+        line_num++;
+
         if (line.empty() || line[0] == '#') continue;
 
         size_t delimiter_pos = line.find('=');
-        if (delimiter_pos == std::string::npos) continue;
+        if (delimiter_pos == std::string::npos) {
+            std::clog << "[WARN] Line " << line_num << ": Missing '=' delimiter. Skipping." << std::endl;
+            continue;
+        }
 
         std::string key = line.substr(0, delimiter_pos);
         std::string value = line.substr(delimiter_pos + 1);
+
         if (key == "task_name") {
+            std::clog << "[LOG] Setting task name to: " << value << std::endl;
             read_task->set_name(value); 
         } 
         else if (key == "description") {
+            std::clog << "[LOG] Description found (Length: " << value.length() << ")" << std::endl;
             read_task->set_description(value);
         } else {
-            std::cerr << "key '" << key << "' not recognized. Skipping line\n" << std::endl;
+            std::cerr << "[WARN] Key '" << key << "' at line " << line_num << " not recognized. Skipping." << std::endl;
         }
     }
 
+    std::clog << "[LOG] Finished loading task configuration." << std::endl;
     return read_task;
 }
