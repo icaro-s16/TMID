@@ -10,7 +10,7 @@ void group::create_group_config_file()
 
     std::ofstream config_file(GROUP_CONFIG_FILE_NAME);
     if (config_file.is_open()) {
-        std::cout << "file created." << std::endl;
+        std::cout << "group created at " << std::filesystem::current_path() << std::endl;
     } else {
         throw std::runtime_error("failed to create group config file");
     }

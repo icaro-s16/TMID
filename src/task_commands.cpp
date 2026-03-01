@@ -9,10 +9,9 @@ void task::create_task_config_file()
 
     std::ofstream config_file(TASK_CONFIG_FILE_NAME);
     if (config_file.is_open()) {
-        std::cout << "file created." << std::endl;
+        std::cout << "task created at " << std::filesystem::current_path() << std::endl;
     } else {
-        std::cerr << "failed to create file." << std::endl;
-        throw;
+        throw std::runtime_error("failed to create task config file");
     }
 
     set_config_file(config_file);
