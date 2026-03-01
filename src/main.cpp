@@ -3,8 +3,7 @@
 
 #include "group_commands.hpp"
 #include "task_commands.hpp"
-
-
+#include "server.hpp"
 
 int main(int argc, char* argv[]) {
 
@@ -29,6 +28,12 @@ int main(int argc, char* argv[]) {
     else if (command == "update")
     {
         /* fetch data from server... */
+    }
+    else if (command == "host")
+    {
+        /* create and host a group server... */
+        Server groupServer = Server();
+        groupServer.run();
     }
     else
     {
