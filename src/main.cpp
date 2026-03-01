@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     {
         /* fetch data from server... */
     }
-    else if (command == "host")
+    else if (command == "run")
     {
         /* create and host a group server... */
         Server groupServer = Server();
