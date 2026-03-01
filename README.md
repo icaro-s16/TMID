@@ -5,7 +5,7 @@ dentro da pasta TMID/, lança esses comandos
 
 ### 1.1 Builda o executavel do programa
 1. `mkdir build`
-2. `g++ src/main src/task_commands.cpp src/group_commands.cpp -o build/tmid`
+2. `g++ src/main.cpp src/task_commands.cpp src/group_commands.cpp src/utils.cpp -o build/tmid`
 
 ### 1.2 Builda e executa o instalador
 3. `g++ tmid-install.cpp -o tmid-install`
