@@ -1,0 +1,8 @@
+# group's config file.
+# lines starting with '#' will be ignored by the system.
+
+# group name: usually the folder name
+group_name=
+
+# participants: all the participants for the group, with their unique id
+participants=
