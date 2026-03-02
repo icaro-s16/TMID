@@ -17,17 +17,21 @@ public:
         socket_fd = socket(domain, type, 0);
         if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
     }
-
     ~Socket(){
         close(socket_fd);
     }
+    
+    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer){}
+
+    virtual ssize_t readBuffer(char *buffer, size_t size_buffer){}
+
 protected:
     int socket_fd;
 };
 
-class Server: public Socket{
+class ServerSocket: public Socket{
 public:    
-    Server(
+    ServerSocket(
         int *opt_value,
         int opt_name = TCP_NODELAY,
         int level = SOL_TCP,
@@ -41,7 +45,7 @@ public:
         }
         address_len = sizeof(address);
     }
-    ~Server(){
+    ~ServerSocket(){
         close(client_socket_fd);
     }
     void setAddress(
@@ -68,11 +72,11 @@ public:
         return client_socket_fd;
     }
 
-    ssize_t sendBuffer(const char* buffer, size_t size_buffer){
+    ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
         return send(client_socket_fd, buffer, size_buffer, 0);
     }
 
-    ssize_t readBuffer(char *buffer, size_t size_buffer){
+    ssize_t readBuffer(char *buffer, size_t size_buffer) override {
         return recv(client_socket_fd, buffer, size_buffer, 0);
     }
 
@@ -83,9 +87,9 @@ private:
 };
 
 
-class Client: public Socket{
+class ClientSocket: public Socket{
 public:
-    Client(
+    ClientSocket(
         int domain = AF_INET,
         int type = SOCK_STREAM   
     ): Socket(domain, type) {
@@ -109,11 +113,11 @@ public:
             std::cerr << "[ERROR] Fail to connect to the server" << std::endl;
     }
 
-    ssize_t sendBuffer(const char* buffer, size_t size_buffer){
+    ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
         return send(socket_fd, buffer, size_buffer, 0);
     }
 
-    ssize_t readBuffer(char* buffer, size_t size_buffer){
+    ssize_t readBuffer(char* buffer, size_t size_buffer) override {
         // - 1 to the null terminator 
         return read(socket_fd, buffer, size_buffer - 1);
     }
