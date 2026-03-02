@@ -107,14 +107,14 @@ bool task::validate_required_files(const Task& _t) {
         for (const auto& filename : disk_filenames) {
             if (std::regex_match(filename, re)) {
                 std::clog << "[LOG] Match found: '" << filename 
-                          << "' satisfies pattern '" << pattern << "'" << std::endl;
+                          << "' -> '" << pattern << "'" << std::endl;
                 found_match = true;
                 break;
             }
         }
 
         if (!found_match) {
-            std::cerr << "[ERROR] Required file pattern '" << pattern << "' was not satisfied." << std::endl;
+            std::cerr << "[ERROR] Required file '" << pattern << "' is missing." << std::endl;
             return false;
         }
     }
