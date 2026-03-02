@@ -35,6 +35,17 @@ int main(int argc, char* argv[]) {
         Server groupServer = Server();
         groupServer.run();
     }
+    else if (command == "send")
+    {
+        std::clog << "[LOG] Validating files...\n";
+        std::unique_ptr<Task> task = task::read_task_config();
+        if (task::validate_required_files(*task)) {
+            std::clog << "[LOG] Sending \n";
+        } else {
+            std::clog << "[LOG] Missing required files.\n";
+            std::cerr << "[ERROR] Send process aborted.\n";
+        }
+    }
     else
     {
         std::cout << "command not found.\n";

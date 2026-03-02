@@ -21,11 +21,13 @@ void task::set_config_file(std::ofstream &config_file)
 {
     config_file << "# task's config file.\n";
     config_file << "# lines starting with '#' will be ignored by the system.\n";
-    config_file << "\n";
-    config_file << "# task name: usually the folder name\n";
-    config_file << "task_name=\n";
-    config_file << "# description: a good and descritive text for the task\n";
-    config_file << "description=\n";
+    config_file << "\n\n";
+    config_file << "# Task name: usually the folder name\n";
+    config_file << "task_name=\n\n";
+    config_file << "# Description: a good and descritive text for the task\n";
+    config_file << "description=\n\n";
+    config_file << "# Required files: the list of necessary files for the program\n";
+    config_file << "required_files=\n";
 
     config_file.close();
 }
@@ -68,6 +70,11 @@ std::unique_ptr<Task> task::read_task_config()
         else if (key == "description") {
             std::clog << "[LOG] Description found (Length: " << value.length() << ")" << std::endl;
             read_task->set_description(value);
+        }
+        else if (key == "required_files") {
+            std::clog << "[LOG] Required files found (Length: " << value.length() << ")" << std::endl;
+
+            read_task->set_required_files(value);
         } else {
             std::cerr << "[WARN] Key '" << key << "' at line " << line_num << " not recognized. Skipping." << std::endl;
         }
@@ -75,4 +82,43 @@ std::unique_ptr<Task> task::read_task_config()
 
     std::clog << "[LOG] Finished loading task configuration." << std::endl;
     return read_task;
+}
+
+bool task::validate_required_files(const Task& _t) {
+    const std::vector<std::string>& required_patterns = _t.required_files;
+
+    if (required_patterns.empty()) return true;
+    
+    std::filesystem::path current_path = std::filesystem::current_path();
+    
+    std::clog << "[LOG] Validating " << required_patterns.size() 
+              << " required file patterns in: " << current_path << std::endl;
+
+    std::vector<std::string> disk_filenames;
+    for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
+        disk_filenames.push_back(entry.path().filename().string());
+    }
+
+    for (const auto& pattern : required_patterns) {
+        bool found_match = false;
+        
+        std::regex re(pattern, std::regex_constants::icase); // May cause crashes
+
+        for (const auto& filename : disk_filenames) {
+            if (std::regex_match(filename, re)) {
+                std::clog << "[LOG] Match found: '" << filename 
+                          << "' satisfies pattern '" << pattern << "'" << std::endl;
+                found_match = true;
+                break;
+            }
+        }
+
+        if (!found_match) {
+            std::cerr << "[ERROR] Required file pattern '" << pattern << "' was not satisfied." << std::endl;
+            return false;
+        }
+    }
+
+    std::clog << "[LOG] All required files validated successfully." << std::endl;
+    return true;
 }
