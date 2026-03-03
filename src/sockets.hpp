@@ -1,11 +1,22 @@
 #ifndef SOCKETS_HPP
 #define SOCKETS_HPP
 
-#include <unistd.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
+#ifdef _WIN32
+    #pragma comment(lib, "ws2_32.lib")
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #define CLOSE(fd)(closesocket(fd))
+    typedef int socklen_t;
+    typedef unsigned short sa_family_t;
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netinet/tcp.h>
+    #define CLOSE(fd)(close(fd))
+#endif
+
 #include <iostream>
 
 class Socket{
@@ -18,7 +29,7 @@ public:
         if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
     }
     ~Socket(){
-        close(socket_fd);
+        CLOSE(socket_fd);
     }
     
     virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer){
@@ -41,11 +52,17 @@ class ServerSocket: public Socket{
 public:    
     ServerSocket(
         int *opt_value,
-        int opt_name = TCP_NODELAY,
+        int opt_name = SO_REUSEADDR,
         int level = SOL_TCP,
         int domain = AF_INET6,
         int type = SOCK_STREAM
     ): Socket(domain, type){
+        #ifdef _WIN32
+            if (opt_name == SO_REUSEADDR)
+                opt_name = SO_EXCLUSIVEADDRUSE;
+            if (level == SOL_TCP)
+                level = IPPROTO_TCP;
+        #endif
         socklen_t opt_len = sizeof(opt_value);
         if (setsockopt(socket_fd, level, opt_name,  opt_value, opt_len) < 0){
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
@@ -54,7 +71,7 @@ public:
         address_len = sizeof(address);
     }
     ~ServerSocket(){
-        close(client_socket_fd);
+        CLOSE(client_socket_fd);
     }
     void setAddress(
         uint16_t port,
