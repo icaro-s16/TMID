@@ -10,8 +10,8 @@
     #define CLOSE(fd)(closesocket(fd))
     typedef int socklen_t;
     typedef unsigned short sa_family_t;
-    typedef SO_REUSEADDR SO_EXCLUSIVEADDRUSE
-    typedef SOL_TCP IPPROTO_TCP
+    #define SO_REUSEADDR SO_EXCLUSIVEADDRUSE
+    #define SOL_TCP IPPROTO_TCP
 #else
     #include <unistd.h>
     #include <sys/socket.h>
