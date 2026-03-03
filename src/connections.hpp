@@ -7,19 +7,20 @@
 #include <string.h>
 #include "sockets.hpp"
 #define PORT 8080
+#define MAX_CHUNK_SIZE 1024
 
-std::vector<char> readAllBytes(std::string path){
+char* readAllBytes(std::string path){
     std::ifstream inFile(path, std::ios::binary);
     if (!inFile.is_open()){
         std::cerr << "[ERROR] Fail to open the file" << std::endl;
-        return std::vector<char>();
+        return nullptr;
     }
     // Get the final position in the file
     inFile.seekg(0, std::ios::end);
-    std::ifstream::pos_type pos = inFile.tellg();
-    std::vector<char> bytes((size_t)pos);
+    std::ifstream::pos_type fileLen = inFile.tellg();
+    char* bytes = new char[(size_t)fileLen];
     inFile.seekg(0, std::ios::beg);
-    inFile.read(&bytes[0], pos); 
+    inFile.read(bytes, fileLen); 
     inFile.close();
     return bytes;
 }
@@ -28,49 +29,66 @@ class Connection{
 protected:
 
     void sendFiles(std::string path, Socket& socket){
-        std::vector<char> bytes = readAllBytes(path);
-        size_t sizeBytes = bytes.size();
-        std::string st_sizeBytes = std::to_string(sizeBytes);
-        std::string digits_size_of_sizeBytes = std::to_string(st_sizeBytes.size());
-        std::string header = digits_size_of_sizeBytes + st_sizeBytes;
-        socket.sendBuffer((char*)&header[0], header.size());
-        size_t pos = 0;
-        size_t chunckSize = 1024;
-        size_t sendChunck = 0;
-        while(sizeBytes > 0){
-            sendChunck = (sizeBytes >= chunckSize)? chunckSize : sizeBytes ; 
-            socket.sendBuffer(&bytes[pos++ * chunckSize], sendChunck);
-            sizeBytes -= sendChunck;
+        
+        char* data = readAllBytes(path);
+        if (!data) return;
+        
+        const size_t lenOfBytes = strlen(data);
+        
+        std::string _lenOfBytes = std::to_string(lenOfBytes);
+        std::string _lenOfSize = std::to_string(_lenOfBytes.size());
+        const char* header = (_lenOfSize + _lenOfBytes).c_str();
+        
+        socket.sendBuffer(header, strlen(header));
+        
+        size_t currentOffset = 0;
+        size_t bytesRemaining = lenOfBytes;
+
+        while(bytesRemaining > 0) {
+            size_t chunkSize = (bytesRemaining >= MAX_CHUNK_SIZE)? MAX_CHUNK_SIZE : bytesRemaining; 
+            socket.sendBuffer(&data[currentOffset * MAX_CHUNK_SIZE], chunkSize);
+            currentOffset++;
+            bytesRemaining -= chunkSize;
         }
+        delete[] data;
     }
 
     void recvFiles(std::string path, Socket& socket){
+        
         std::ofstream outFile(path, std::ios::binary);
         if (!outFile.is_open()){
             std::cerr << "[ERROR] Fail to open the file" << std::endl;
             return;
         }
-        char digitSize[1]; 
-        socket.readBuffer(&digitSize[0], 1);
-        std::vector<char> fileSize(std::stoul(digitSize));
-        socket.readBuffer((char*)&fileSize[0], fileSize.size());
-        size_t chunckSize = 1024;
-        std::string s(fileSize.begin(), fileSize.end());
-        size_t size = std::stoul(s);
-        size_t writeSize = size;
-        size_t pos = 0;
-        size_t readBytes = 0;
-        std::vector<char> bytes(size);
-        while(size > 0){
-            readBytes = (size >= chunckSize) ? chunckSize : size;
-            ssize_t recvBytes = socket.readBuffer(&bytes[pos++ * chunckSize],  readBytes);
+
+        char _lenOfSize;
+        socket.readBuffer(&_lenOfSize, 1);
+        std::size_t lenOfSize = _lenOfSize - '0';
+        
+        char* _lenOfBytes = new char[lenOfSize];
+        socket.readBuffer(_lenOfBytes, lenOfSize);
+        std::size_t lenOfBytes = std::stoul(_lenOfBytes);
+        delete[] _lenOfBytes;
+        
+        char* data = new char[lenOfBytes];
+        std::size_t bytesRemaining = lenOfBytes;
+        std::size_t currentOffset = 0;
+
+        while(bytesRemaining > 0){
+            ssize_t requestSize = (bytesRemaining >= MAX_CHUNK_SIZE) ? MAX_CHUNK_SIZE : bytesRemaining;
+            ssize_t recvBytes = socket.readBuffer(&data[currentOffset],  requestSize);
+            
             if (recvBytes <= 0) break;
-            size -= readBytes;
-        } 
-        writeSize = (bytes[writeSize - 1] == '\0') ? writeSize - 1 : writeSize;
-        outFile.write(&bytes[0], (std::streamsize)writeSize);
+
+            currentOffset += recvBytes;
+            bytesRemaining -= recvBytes;
+        }
+
+        outFile.write(data, (std::streamsize)lenOfBytes);
         outFile.flush();
         outFile.close();
+
+        delete[] data;
     }
 
     ssize_t sendMsg(std::string msg, Socket& socket){
