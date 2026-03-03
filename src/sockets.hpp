@@ -11,7 +11,7 @@
 class Socket{
 public:    
     Socket(
-        int domain = AF_INET,
+        int domain = AF_INET6,
         int type = SOCK_STREAM    
     ){
         socket_fd = socket(domain, type, 0);
@@ -43,7 +43,7 @@ public:
         int *opt_value,
         int opt_name = TCP_NODELAY,
         int level = SOL_TCP,
-        int domain = AF_INET,
+        int domain = AF_INET6,
         int type = SOCK_STREAM
     ): Socket(domain, type){
         socklen_t opt_len = sizeof(opt_value);
@@ -58,12 +58,12 @@ public:
     }
     void setAddress(
         uint16_t port,
-        sa_family_t family = AF_INET,
-        in_addr_t s_addr = INADDR_ANY
+        sa_family_t family = AF_INET6,
+        in6_addr s_addr = in6addr_any
     ){
-        address.sin_family = family;
-        address.sin_addr.s_addr = s_addr;
-        address.sin_port = htons(port);
+        address.sin6_family = family;
+        address.sin6_addr = s_addr;
+        address.sin6_port = htons(port);
     }
 
     void bindSocket(){
@@ -89,16 +89,15 @@ public:
     }
 
 private:
-    sockaddr_in address;
+    sockaddr_in6 address;
     socklen_t address_len;
     int client_socket_fd;
 };
 
-
 class ClientSocket: public Socket{
 public:
     ClientSocket(
-        int domain = AF_INET,
+        int domain = AF_INET6,
         int type = SOCK_STREAM   
     ): Socket(domain, type) {
         address_len = sizeof(server_address);
@@ -107,11 +106,11 @@ public:
     void setServerAddress(
         const char* addr,
         uint16_t port,
-        sa_family_t family = AF_INET
+        sa_family_t family = AF_INET6
     ){
-        server_address.sin_family = family;
-        server_address.sin_port = htons(port);
-        if (inet_pton(family, addr, &server_address.sin_addr) <= 0)
+        server_address.sin6_family = family;
+        server_address.sin6_port = htons(port);
+        if (inet_pton(family, addr, &server_address.sin6_addr) <= 0)
             std::cerr << "[ERROR] Fail to set the server address" << std::endl;
         
     }
@@ -130,7 +129,7 @@ public:
         return read(socket_fd, buffer, size_buffer - 1);
     }
 private:
-    sockaddr_in server_address;
+    sockaddr_in6 server_address;
     socklen_t address_len;
 
 };
