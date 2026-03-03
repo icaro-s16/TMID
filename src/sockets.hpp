@@ -21,9 +21,17 @@ public:
         close(socket_fd);
     }
     
-    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer){}
+    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer){
+        (void)(buffer);
+        (void)(size_buffer);
+        return 0;
+    }
 
-    virtual ssize_t readBuffer(char *buffer, size_t size_buffer){}
+    virtual ssize_t readBuffer(char *buffer, size_t size_buffer){
+        (void)(buffer);
+        (void)(size_buffer);
+        return 0;
+    }
 
 protected:
     int socket_fd;

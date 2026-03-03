@@ -17,7 +17,7 @@ std::vector<char> readAllBytes(std::string path){
     // Get the final position in the file
     inFile.seekg(0, std::ios::end);
     std::ifstream::pos_type pos = inFile.tellg();
-    std::vector<char> bytes(pos);
+    std::vector<char> bytes((size_t)pos);
     inFile.seekg(0, std::ios::beg);
     inFile.read(&bytes[0], pos); 
     inFile.close();
@@ -28,13 +28,15 @@ class Connection{
 protected:
 
     void sendFiles(std::string path, Socket& socket){
-        auto bytes = readAllBytes(path);
-        auto sizeBytes = bytes.size();
+        std::vector<char> bytes = readAllBytes(path);
+        size_t sizeBytes = bytes.size();
         std::string st_sizeBytes = std::to_string(sizeBytes);
-        socket.sendBuffer(st_sizeBytes.c_str(), st_sizeBytes.size());
-        auto pos = 0;
-        auto chunckSize = 1024;
-        auto sendChunck = 0;
+        std::string digits_size_of_sizeBytes = std::to_string(st_sizeBytes.size());
+        std::string header = digits_size_of_sizeBytes + st_sizeBytes;
+        socket.sendBuffer((char*)&header[0], header.size());
+        size_t pos = 0;
+        size_t chunckSize = 1024;
+        size_t sendChunck = 0;
         while(sizeBytes > 0){
             sendChunck = (sizeBytes >= chunckSize)? chunckSize : sizeBytes ; 
             socket.sendBuffer(&bytes[pos++ * chunckSize], sendChunck);
@@ -48,25 +50,25 @@ protected:
             std::cerr << "[ERROR] Fail to open the file" << std::endl;
             return;
         }
-        auto chunckSize = 1024;
-        /*
-            use just 4 bytes to get the exact size of a unsigned long int
-        */
-        char size[4];
-        socket.readBuffer(size, 4);
-        auto fileSize = std::stoul(size);
-        auto writeSize = fileSize;
-        std::vector<char> bytes(fileSize);
-        auto pos = 0;
-        auto readBytes = 0;
-        while(fileSize > 0){
-            readBytes = (fileSize >= chunckSize) ? chunckSize : fileSize;
-            auto recvBytes = socket.readBuffer(&bytes[pos++ * chunckSize],  readBytes);
+        char digitSize[1]; 
+        socket.readBuffer(&digitSize[0], 1);
+        std::vector<char> fileSize(std::stoul(digitSize));
+        socket.readBuffer((char*)&fileSize[0], fileSize.size());
+        size_t chunckSize = 1024;
+        std::string s(fileSize.begin(), fileSize.end());
+        size_t size = std::stoul(s);
+        size_t writeSize = size;
+        size_t pos = 0;
+        size_t readBytes = 0;
+        std::vector<char> bytes(size);
+        while(size > 0){
+            readBytes = (size >= chunckSize) ? chunckSize : size;
+            ssize_t recvBytes = socket.readBuffer(&bytes[pos++ * chunckSize],  readBytes);
             if (recvBytes <= 0) break;
-            fileSize -= readBytes;
+            size -= readBytes;
         } 
         writeSize = (bytes[writeSize - 1] == '\0') ? writeSize - 1 : writeSize;
-        outFile.write(&bytes[0], writeSize);
+        outFile.write(&bytes[0], (std::streamsize)writeSize);
         outFile.flush();
         outFile.close();
     }
