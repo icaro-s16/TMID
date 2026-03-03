@@ -6,7 +6,6 @@
 #include <fstream>
 #include <string.h>
 #include "sockets.hpp"
-#define PORT 8080
 #define MAX_CHUNK_SIZE 1024
 
 char* readAllBytes(std::string path){
@@ -102,7 +101,7 @@ protected:
 
 class Client: public Connection{
 public:
-    Client(){}
+    Client(ClientSocket &_client):client(_client){}
 
     void createClient(std::string ip){
         client.setServerAddress(ip.c_str(), PORT);
@@ -126,13 +125,12 @@ public:
     }
 
 private:
-    ClientSocket client;
+    ClientSocket& client;
 };
 
 class Server: public Connection{
 public:
-    Server(int *opt): server(opt){
-        server.setAddress(PORT);
+    Server(ServerSocket& _server):server(_server){
         server.bindSocket();
     }
 
@@ -156,7 +154,7 @@ public:
         return recvMsg(buffer, server);
     }
 private:
-    ServerSocket server;
+    ServerSocket& server;
 };
 
 #endif
