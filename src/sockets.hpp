@@ -7,6 +7,7 @@
     #pragma comment(lib, "ws2_32.lib")
     #include <winsock2.h>
     #include <ws2tcpip.h>
+    #define ENABLE(a)((char*)a)
     #define CLOSE(fd)(closesocket(fd))
     typedef int socklen_t;
     typedef unsigned short sa_family_t;
@@ -18,6 +19,7 @@
     #include <arpa/inet.h>
     #include <netinet/in.h>
     #include <netinet/tcp.h>
+    #define ENABLE(a)(a)
     #define CLOSE(fd)(close(fd))
 #endif
 
@@ -54,7 +56,7 @@ public:
         int domain,
         int type
     ):Socket(domain, type){
-        if (setsockopt(socket_fd, level, opt_name,  opt_value, sizeof(int)) < 0)
+        if (setsockopt(socket_fd, level, opt_name,  ENABLE(opt_value), sizeof(int)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
             
     }
