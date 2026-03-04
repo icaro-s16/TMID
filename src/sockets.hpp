@@ -11,6 +11,7 @@
     #define CLOSE(fd)(closesocket(fd))
     typedef int socklen_t;
     typedef unsigned short sa_family_t;
+    typedef unsigned long in_addr_t;
     #define SO_REUSEADDR SO_EXCLUSIVEADDRUSE
     #define SOL_TCP IPPROTO_TCP
 #else
@@ -25,17 +26,20 @@
 
 #include <iostream>
 
-class Socket{
+class Socket {
 public:    
-    Socket(
-        int domain = AF_INET6,
-        int type = SOCK_STREAM    
-    ){
-        socket_fd = socket(domain, type, 0);
+    Socket(int domain, int type){
+        #ifdef _WIN32
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
+            std::cerr << "[ERROR] Error at WSAStartup()\n";
+        }
+        #endif
+        socket_fd = socket(domain, type, 6);
         if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
     }
     virtual ~Socket(){
         CLOSE(socket_fd);
+        WSACleanup();
     }
     
     virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer) = 0;
@@ -44,6 +48,10 @@ public:
 
 protected:
     int socket_fd;
+private:
+    #ifdef _WIN32
+    WSADATA wsaData;
+    #endif
 };
 
 
@@ -56,7 +64,8 @@ public:
         int domain,
         int type
     ):Socket(domain, type){
-        if (setsockopt(socket_fd, level, opt_name,  ENABLE(opt_value), sizeof(int)) < 0)
+        bool opt = true;
+        if (setsockopt(socket_fd, level, opt_name,  (char*) &opt, sizeof(opt)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
             
     }
@@ -95,10 +104,10 @@ public:
     void setAddress(
         uint16_t port = PORT,
         sa_family_t family = AF_INET6,
-        in6_addr s_addr = in6addr_any
+        in6_addr _s_addr = in6addr_any
     ){
         address.sin6_family = family;
-        address.sin6_addr = s_addr;
+        address.sin6_addr = _s_addr;
         address.sin6_port = htons(port);
     }
 
@@ -135,10 +144,10 @@ public:
     void setAddress(
         uint16_t port = PORT,
         sa_family_t family = AF_INET,
-        in_addr_t s_addr = INADDR_ANY
+        in_addr_t _s_addr = INADDR_ANY
     ){
         address.sin_family = family;
-        address.sin_addr.s_addr = s_addr;
+        address.sin_addr.s_addr = _s_addr;
         address.sin_port = htons(port);
     }
 
