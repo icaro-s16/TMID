@@ -3,7 +3,7 @@
 
 #define PORT 8080
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
     #pragma comment(lib, "ws2_32.lib")
     #include <winsock2.h>
     #include <ws2tcpip.h>
@@ -11,7 +11,6 @@
     #define CLOSE(fd)(closesocket(fd))
     typedef int socklen_t;
     typedef unsigned short sa_family_t;
-    #define SO_REUSEADDR SO_EXCLUSIVEADDRUSE
     #define SOL_TCP IPPROTO_TCP
 #else
     #include <unistd.h>
