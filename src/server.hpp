@@ -1,21 +1,26 @@
 #include "group.hpp"
+#include "connections.hpp"
 
-class Server {
+class IServer {
     std::unique_ptr<Group> m_group;
 public:
-    Server(): m_group(group::read_group_config()) {}
+    IServer(): m_group(group::read_group_config()) {}
     void run() {
-        std::string cmd;
-        std::cout << "starting group...\n"
-                  << "group name:" << m_group->name
-                  << "\nparticipants ammount:" << m_group->participants.size()
-                  << std::endl;
-
-        while (true) {
-            std::cout << "tmid group server rodando... [q -> sair]\n> ";
-            std::cin >> cmd;
-            
-            if (cmd == "q") break;
+        #if defined(_WIN32) || defined(_WIN64)
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
+            std::cerr << "[ERROR] Error at WSAStartup()\n";
         }
+        #endif
+
+        ServerSocket serverSocket(ConnectionProtocol::IPV4);
+        serverSocket.setAddress();
+        Server server(serverSocket);
+        server.connectClient();
+        server.recvAllFilesFromClient("retorno");
+
+        #if defined(_WIN32) || defined(_WIN64)
+        WSACleanup();
+        #endif
     }
 };
