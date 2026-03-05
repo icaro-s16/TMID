@@ -1,9 +1,22 @@
 #include "src/connections.hpp"
 
 int main(){
+
+    #if defined(_WIN32) || defined(_WIN64)
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
+        std::cerr << "[ERROR] Error at WSAStartup()\n";
+    }
+    #endif
+
     ClientSocket clientSocket(ConnectionProtocol::IPV4);
     Client client(clientSocket);
     client.createClient("127.0.0.1");
     client.sendAllFilesToServer("src");
+    
+    #if defined(_WIN32) || defined(_WIN64)
+    WSACleanup();
+    #endif
+    
     return 0;
 }
