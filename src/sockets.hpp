@@ -10,8 +10,8 @@
     #define CLOSE(fd)(closesocket(fd))
     typedef int socklen_t;
     typedef unsigned short sa_family_t;
-    typedef SO_REUSEADDR SO_EXCLUSIVEADDRUSE
-    typedef SOL_TCP IPPROTO_TCP
+    #define SO_REUSEADDR SO_EXCLUSIVEADDRUSE
+    #define SOL_TCP IPPROTO_TCP
 #else
     #include <unistd.h>
     #include <sys/socket.h>
@@ -28,7 +28,7 @@ enum class ConnectionProtocol { IPV4, IPV6 };
 // SOCKET BASE CLASS
 // =================
 class Socket{
-public:    
+public:
     Socket(ConnectionProtocol cp): m_cp(cp) {
         int domain, type = SOCK_STREAM, protocol = 0;
 
@@ -62,8 +62,15 @@ public:
         else
             address_len = sizeof(ipv6_address);
         
-        int opt_value = 0;
-        if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  &opt_value, sizeof(int)) < 0)
+        #if defined(_WIN32) || defined(_WIN64)
+        bool _optvalue = true;
+        char *optvalue = (char*) _optvalue; 
+        #else
+        int _optvalue = 1;
+        int *optvalue = &opt_value;
+        #endif
+
+        if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(int)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
     }
 
