@@ -5,6 +5,6 @@ int main(){
     serverSocket.setAddress();
     Server server(serverSocket);
     server.connectClient();
-    server.sendAllFilesToClient("src");
+    server.sendFileToClient("src/connections.hpp");
     return 0;
 }

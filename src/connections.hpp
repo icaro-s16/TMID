@@ -121,9 +121,14 @@ protected:
     void recvFile(Socket& socket){
         char header[MAX_CHUNK_SIZE];
         memset(header, 0, MAX_CHUNK_SIZE);
+        size_t header_recv_bytes = 0;
 
-        socket.readBuffer(&header, MAX_CHUNK_SIZE);
+        while(header_recv_bytes < MAX_CHUNK_SIZE){
+            
+            header_recv_bytes += socket.readBuffer(&header[header_recv_bytes], MAX_CHUNK_SIZE - header_recv_bytes);
         
+        }
+
         // This funtion destroy the char*
         HeaderFile header_values = headerFileParser(header);
 
@@ -204,7 +209,7 @@ public:
         client.connectToServer();
     }
 
-    void sendFilesToServer(std::string path){
+    void sendFileToServer(std::string path){
         sendFile(path, client);
     }
 
@@ -212,7 +217,7 @@ public:
         sendAllFiles(dir, client);
     }
 
-    void recvFilesFromServer(){
+    void recvFileFromServer(){
         recvFile(client);
     }
 
@@ -242,7 +247,7 @@ public:
         return server.connectToClient();
     }
     
-    void sendFilesToClient(std::string path){
+    void sendFileToClient(std::string path){
         
         sendFile(path, server);
     }
@@ -251,11 +256,11 @@ public:
         sendAllFiles(dir, server);
     }
 
-    void recvFilesFromClient(std::string path){
+    void recvFileFromClient(){
         recvFile(server);
     }
 
-    void recvAllFilesFromClient(std::string pattern){
+    void recvAllFilesFromClient(){
         recvAllFiles(server);
     }
 
