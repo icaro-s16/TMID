@@ -24,12 +24,12 @@ char* readAllBytes(std::string path){
     return bytes;
 }
 
-std::vector<std::string> getAllFilesPath(std::string st_dir_path){
+std::vector<std::string> getAllFilePath(std::string st_dir_path){
     std::vector<std::string> filesPath;
     std::filesystem::path dir_path(st_dir_path); 
     for(auto entry: std::filesystem::directory_iterator(dir_path)){
         if (entry.is_regular_file())
-            filesPath.push_back(entry.path());
+            filesPath.push_back(entry.path().string());
     }
     return filesPath;
 }
@@ -37,7 +37,7 @@ std::vector<std::string> getAllFilesPath(std::string st_dir_path){
 class Connection{
 protected:
     void sendAllFiles(std::string dir_path, Socket& socket){
-        std::vector<std::string> filesPath = getAllFilesPath(dir_path);
+        std::vector<std::string> filesPath = getAllFilePath(dir_path);
         
 
         std::string lenOfFilesPath = std::to_string(filesPath.size());
@@ -46,12 +46,12 @@ protected:
         std::string header = sizeOflen + lenOfFilesPath;
         socket.sendBuffer(header.c_str(), header.size());
 
-        for(std::string paths: filesPath)
-            sendFiles(paths, socket);
+        for(std::string fileName: filesPath)
+            sendFile(fileName, socket);
 
     }
 
-    void recvAllFiles(std::string pattern, Socket& socket){
+    void recvAllFiles(Socket& socket){
         
         char _len;
         socket.readBuffer(&_len, 1);
@@ -65,14 +65,13 @@ protected:
         delete[] _file_counter;
 
         for(auto i = 0; i < file_counter; i++)
-            recvFiles(pattern + std::to_string(i + 1), socket);
+            recvFile(socket);
         
     }
 
-    void sendFiles(std::string path, Socket& socket){
-        std::vector<std::string> path_tokens = splitText(path, '/');
-        std::string fileName = path_tokens[path_tokens.size() - 1];
-
+    void sendFile(std::string path, Socket& socket){
+        std::vector<std::string> file_tokens = splitText(path, '/');
+        std::string fileName = file_tokens[file_tokens.size() - 1];
         /*
         Header: <name lenght size> <name lenght> <name> <bytes lenght size> <bytes len>
         */
@@ -110,7 +109,7 @@ protected:
         delete[] data;
     }
 
-    void recvFiles(std::string path, Socket& socket){
+    void recvFile(Socket& socket){
         
         
         char size;
@@ -127,19 +126,15 @@ protected:
         char* fileName = new char[fileNameLen];
         socket.readBuffer(fileName, fileNameLen);
         
-        std::vector<std::string> file_name_tokens = splitText(fileName, '.');
-        memset(fileName, 0, fileNameLen);
-        delete[] fileName;
 
-        //If the send file has a extensio, this add this extension to the path to create the correct file
-        if (file_name_tokens.size() > 1) path += "." + file_name_tokens[file_name_tokens.size() - 1];
-
-
-        std::ofstream outFile(path, std::ios::binary);
+        std::ofstream outFile(fileName, std::ios::binary);
         if (!outFile.is_open()){
             std::cerr << "[ERROR] Fail to open the file" << std::endl;
             return;
         }
+
+        memset(fileName, 0, fileNameLen);
+        delete[] fileName;
 
         socket.readBuffer(&size, 1);
 
@@ -192,7 +187,7 @@ public:
     }
 
     void sendFilesToServer(std::string path){
-        sendFiles(path, client);
+        sendFile(path, client);
     }
 
     void sendAllFilesToServer(std::string dir){
@@ -200,11 +195,11 @@ public:
     }
 
     void recvFilesFromServer(std::string path){
-        recvFiles(path, client);
+        recvFile(client);
     }
 
     void recvAllFilesFromServer(std::string pattern){
-        recvAllFiles(pattern, client);
+        recvAllFiles(client);
     }
 
     ssize_t sendMsgToServer(std::string msg){
@@ -230,7 +225,8 @@ public:
     }
     
     void sendFilesToClient(std::string path){
-        sendFiles(path, server);
+        
+        sendFile(path, server);
     }
 
     void sendAllFilesToClient(std::string dir){
@@ -238,11 +234,11 @@ public:
     }
 
     void recvFilesFromClient(std::string path){
-        recvFiles(path, server);
+        recvFile(server);
     }
 
     void recvAllFilesFromClient(std::string pattern){
-        recvAllFiles(pattern, server);
+        recvAllFiles(server);
     }
 
     ssize_t sendMsgToClient(std::string msg){
