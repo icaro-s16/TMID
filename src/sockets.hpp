@@ -64,7 +64,7 @@ public:
         
         #if defined(_WIN32) || defined(_WIN64)
         bool _optvalue = true;
-        char *optvalue = (char*) _optvalue; 
+        char *optvalue = (char*) &_optvalue; 
         #else
         int _optvalue = 1;
         int *optvalue = &opt_value;
@@ -72,6 +72,8 @@ public:
 
         if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(_optvalue)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
+        else
+            std::clog << "[LOG] successfuly setted socket options" << std::endl;
     }
 
     ~ServerSocket(){ CLOSE(client_socket_fd); }
