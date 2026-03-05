@@ -5,72 +5,155 @@
 #include <vector>
 #include <fstream>
 #include <string.h>
+#include "utils.hpp"
 #include "sockets.hpp"
 #define MAX_CHUNK_SIZE 1024
 
 char* readAllBytes(std::string path){
-    std::ifstream inFile(path, std::ios::binary);
+    std::ifstream inFile(path, std::ios::binary | std::ios::ate);
     if (!inFile.is_open()){
         std::cerr << "[ERROR] Fail to open the file" << std::endl;
         return nullptr;
     }
-    // Get the final position in the file
-    inFile.seekg(0, std::ios::end);
     std::ifstream::pos_type fileLen = inFile.tellg();
     char* bytes = new char[(size_t)fileLen];
+    // Back to beginning of the file
     inFile.seekg(0, std::ios::beg);
     inFile.read(bytes, fileLen); 
     inFile.close();
     return bytes;
 }
 
+std::vector<std::string> getAllFilesPath(std::string st_dir_path){
+    std::vector<std::string> filesPath;
+    std::filesystem::path dir_path(st_dir_path); 
+    for(auto entry: std::filesystem::directory_iterator(dir_path)){
+        if (entry.is_regular_file())
+            filesPath.push_back(entry.path());
+    }
+    return filesPath;
+}
+
 class Connection{
 protected:
+    void sendAllFiles(std::string dir_path, Socket& socket){
+        std::vector<std::string> filesPath = getAllFilesPath(dir_path);
+        
+
+        std::string lenOfFilesPath = std::to_string(filesPath.size());
+        std::string sizeOflen = std::to_string(lenOfFilesPath.size());
+
+        std::string header = sizeOflen + lenOfFilesPath;
+        socket.sendBuffer(header.c_str(), header.size());
+
+        for(std::string paths: filesPath)
+            sendFiles(paths, socket);
+
+    }
+
+    void recvAllFiles(std::string pattern, Socket& socket){
+        
+        char _len;
+        socket.readBuffer(&_len, 1);
+        
+        unsigned short len = _len - '0';
+        char* _file_counter = new char[len];
+
+        socket.readBuffer(_file_counter, len);
+
+        size_t file_counter = std::stoul(_file_counter);
+        delete[] _file_counter;
+
+        for(auto i = 0; i < file_counter; i++)
+            recvFiles(pattern + std::to_string(i + 1), socket);
+        
+    }
 
     void sendFiles(std::string path, Socket& socket){
-        
+        std::vector<std::string> path_tokens = splitText(path, '/');
+        std::string fileName = path_tokens[path_tokens.size() - 1];
+
+        /*
+        Header: <name lenght size> <name lenght> <name> <bytes lenght size> <bytes len>
+        */
+
+        std::string nameLen = std::to_string(fileName.size());
+                                   
+        // Add name lenght size
+        std::string header = std::to_string(nameLen.size());
+
+        header += nameLen;
+        header += fileName;
+
         char* data = readAllBytes(path);
         if (!data) return;
         
-        const size_t lenOfBytes = strlen(data);
-        
-        std::string _lenOfBytes = std::to_string(lenOfBytes);
-        std::string _lenOfSize = std::to_string(_lenOfBytes.size());
-        const char* header = (_lenOfSize + _lenOfBytes).c_str();
-        
-        socket.sendBuffer(header, strlen(header));
-        
-        size_t currentOffset = 0;
-        size_t bytesRemaining = lenOfBytes;
+        const size_t bytesLen = strlen(data);
+        std::string st_bytesLen = std::to_string(bytesLen); 
+
+        header += std::to_string(st_bytesLen.size());
+        header += st_bytesLen;
+
+        socket.sendBuffer(header.c_str(), header.size());
+        header.clear();
+
+        size_t currentffSet = 0;
+        size_t bytesRemaining = bytesLen;
 
         while(bytesRemaining > 0) {
             size_t chunkSize = (bytesRemaining >= MAX_CHUNK_SIZE)? MAX_CHUNK_SIZE : bytesRemaining; 
-            socket.sendBuffer(&data[currentOffset * MAX_CHUNK_SIZE], chunkSize);
-            currentOffset++;
-            bytesRemaining -= chunkSize;
+            size_t sendBytes = socket.sendBuffer(&data[currentffSet], chunkSize);
+            currentffSet += sendBytes;
+            bytesRemaining -= sendBytes;
         }
+        memset(data, 0, bytesLen);
         delete[] data;
     }
 
     void recvFiles(std::string path, Socket& socket){
         
+        
+        char size;
+        socket.readBuffer(&size, 1);
+        std::size_t fileNameLenSize = size - '0';
+        
+        char* _fileNameLen = new char[fileNameLenSize];
+
+        socket.readBuffer(_fileNameLen, fileNameLenSize);
+        std::size_t fileNameLen = std::stoul(_fileNameLen);
+        memset(_fileNameLen, 0, fileNameLenSize);
+        delete[] _fileNameLen;
+        
+        char* fileName = new char[fileNameLen];
+        socket.readBuffer(fileName, fileNameLen);
+        
+        std::vector<std::string> file_name_tokens = splitText(fileName, '.');
+        memset(fileName, 0, fileNameLen);
+        delete[] fileName;
+
+        //If the send file has a extensio, this add this extension to the path to create the correct file
+        if (file_name_tokens.size() > 1) path += "." + file_name_tokens[file_name_tokens.size() - 1];
+
+
         std::ofstream outFile(path, std::ios::binary);
         if (!outFile.is_open()){
             std::cerr << "[ERROR] Fail to open the file" << std::endl;
             return;
         }
 
-        char _lenOfSize;
-        socket.readBuffer(&_lenOfSize, 1);
-        std::size_t lenOfSize = _lenOfSize - '0';
+        socket.readBuffer(&size, 1);
+
+        std::size_t bytesLenSize = size - '0';
         
-        char* _lenOfBytes = new char[lenOfSize];
-        socket.readBuffer(_lenOfBytes, lenOfSize);
-        std::size_t lenOfBytes = std::stoul(_lenOfBytes);
-        delete[] _lenOfBytes;
+        char* _bytesLen = new char[bytesLenSize];
         
-        char* data = new char[lenOfBytes];
-        std::size_t bytesRemaining = lenOfBytes;
+        socket.readBuffer(_bytesLen, bytesLenSize);
+        std::size_t bytesLen = std::stoul(_bytesLen);
+        memset(_bytesLen, 0, bytesLenSize);
+        delete[] _bytesLen;
+        
+        char* data = new char[bytesLen];
+        std::size_t bytesRemaining = bytesLen;
         std::size_t currentOffset = 0;
 
         while(bytesRemaining > 0){
@@ -83,10 +166,9 @@ protected:
             bytesRemaining -= recvBytes;
         }
 
-        outFile.write(data, (std::streamsize)lenOfBytes);
-        outFile.flush();
+        outFile.write(data, (std::streamsize)bytesLen);
         outFile.close();
-
+        memset(data, 0, bytesLen);
         delete[] data;
     }
 
@@ -97,6 +179,7 @@ protected:
     ssize_t recvMsg(std::string &buffer, Socket& socket){
         return socket.readBuffer(&buffer[0], buffer.size());
     }
+
 };
 
 class Client: public Connection{
@@ -112,8 +195,16 @@ public:
         sendFiles(path, client);
     }
 
+    void sendAllFilesToServer(std::string dir){
+        sendAllFiles(dir, client);
+    }
+
     void recvFilesFromServer(std::string path){
         recvFiles(path, client);
+    }
+
+    void recvAllFilesFromServer(std::string pattern){
+        recvAllFiles(pattern, client);
     }
 
     ssize_t sendMsgToServer(std::string msg){
@@ -142,8 +233,16 @@ public:
         sendFiles(path, server);
     }
 
+    void sendAllFilesToClient(std::string dir){
+        sendAllFiles(dir, server);
+    }
+
     void recvFilesFromClient(std::string path){
         recvFiles(path, server);
+    }
+
+    void recvAllFilesFromClient(std::string pattern){
+        recvAllFiles(pattern, server);
     }
 
     ssize_t sendMsgToClient(std::string msg){
