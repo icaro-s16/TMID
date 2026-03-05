@@ -26,56 +26,92 @@
 
 #include <iostream>
 
-class Socket {
+enum class ConnectionProtocol { IPV4, IPV6 };
+// =================
+// SOCKET BASE CLASS
+// =================
+class Socket{
 public:    
-    Socket(int domain, int type){
-        #ifdef _WIN32
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
-            std::cerr << "[ERROR] Error at WSAStartup()\n";
-        }
-        #endif
-        socket_fd = socket(domain, type, 6);
+    Socket(ConnectionProtocol cp): m_cp(cp) {
+        if (m_cp == ConnectionProtocol::IPV4)
+            socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        else
+            socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
+
         if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
     }
-    virtual ~Socket(){
-        CLOSE(socket_fd);
-        WSACleanup();
-    }
-    
-    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer) = 0;
 
+    ConnectionProtocol protocol() { return m_cp; }
+    virtual ~Socket(){ CLOSE(socket_fd); }
+    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer) = 0;
     virtual ssize_t readBuffer(char *buffer, size_t size_buffer) = 0;
 
 protected:
     int socket_fd;
-private:
-    #ifdef _WIN32
-    WSADATA wsaData;
-    #endif
+    ConnectionProtocol m_cp;
 };
 
-
+// =================
+// SERVER SOCKET
+// =================
 class ServerSocket: public Socket{
 public:
-    ServerSocket(
-        int *opt_value,
-        int opt_name,
-        int level,
-        int domain,
-        int type
-    ):Socket(domain, type){
-        bool opt = true;
-        if (setsockopt(socket_fd, level, opt_name,  (char*) &opt, sizeof(opt)) < 0)
+    ServerSocket(ConnectionProtocol cp): Socket(cp) {
+        if (m_cp == ConnectionProtocol::IPV4)
+            address_len = sizeof(ipv4_address);
+        else
+            address_len = sizeof(ipv6_address);
+        
+        int opt_value = 0;
+        if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  &opt_value, sizeof(int)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
-            
-    }
-    virtual ~ServerSocket(){
-        CLOSE(client_socket_fd);
     }
 
-    virtual void bindSocket() = 0;
+    ~ServerSocket(){ CLOSE(client_socket_fd); }
     
-    virtual int connectToClient() = 0;
+    void bindSocket() {
+        int result;
+        if (m_cp == ConnectionProtocol::IPV4)
+            result = bind(socket_fd, (sockaddr*)&ipv4_address, sizeof(ipv4_address));
+        else
+            result = bind(socket_fd, (sockaddr*)&ipv6_address, sizeof(ipv6_address));
+
+        if (result < 0)
+            std::cerr << "[ERROR] Fail to bind the socket" << std::endl;
+        else
+            std::clog << "[LOG] Successfully binded socket" << std::endl;
+    };
+
+    int connectToClient() {
+        if (listen(socket_fd, 3) < 0)
+            std::cerr << "[ERROR] Fail to listen for clients" << std::endl;
+        else
+            std::clog << "[LOG] listening for clients..." << std::endl;
+
+        if (m_cp == ConnectionProtocol::IPV4)
+            client_socket_fd = accept(socket_fd, (sockaddr*)&ipv4_address, &address_len);
+        else
+            client_socket_fd = accept(socket_fd, nullptr, nullptr);
+
+        if (client_socket_fd < 0)
+            std::cerr << "[ERROR] Fail to connect to the client" << std::endl;
+        else
+            std::clog << "[LOG] Successfully connected with client" << std::endl;
+
+        return client_socket_fd;
+    };
+    
+    void setAddress() {
+        if (m_cp == ConnectionProtocol::IPV4) {
+            ipv4_address.sin_family = AF_INET;
+            ipv4_address.sin_addr.s_addr = INADDR_ANY;
+            ipv4_address.sin_port = htons(PORT);
+        } else {
+            ipv6_address.sin6_family = AF_INET6;
+            ipv6_address.sin6_addr = in6addr_any;
+            ipv6_address.sin6_port = htons(PORT); 
+        }
+    }
 
     ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
         return send(client_socket_fd, buffer, size_buffer, 0);
@@ -87,106 +123,58 @@ public:
 
 protected:
     socklen_t address_len;
+    sockaddr_in ipv4_address;
+    sockaddr_in6 ipv6_address;
     int client_socket_fd;
 };
 
-class ServerSocketIPv6: public ServerSocket{
-public:    
-    ServerSocketIPv6(
-        int *opt_value,
-        int opt_name = TCP_NODELAY,
-        int level = SOL_TCP,
-        int domain = AF_INET6,
-        int type = SOCK_STREAM
-    ): ServerSocket(opt_value, opt_name, level, domain, type){
-        address_len = sizeof(address);
-    }
-    void setAddress(
-        uint16_t port = PORT,
-        sa_family_t family = AF_INET6,
-        in6_addr _s_addr = in6addr_any
-    ){
-        address.sin6_family = family;
-        address.sin6_addr = _s_addr;
-        address.sin6_port = htons(port);
-    }
-
-    void bindSocket() override{
-        if (bind(socket_fd, (sockaddr*)&address, sizeof(address)) < 0)
-            std::cerr << "[ERROR] Fail to bind the socket" << std::endl;
-    }
-    
-    int connectToClient() override{
-        if (listen(socket_fd, 3) < 0)
-            std::cerr << "[ERROR] Fail to listen to clients" << std::endl;
-        client_socket_fd = accept(socket_fd, (sockaddr*)&address, &address_len);
-        if (client_socket_fd < 0)
-            std::cerr << "[ERROR] Fail to connect to the client" << std::endl;
-        return client_socket_fd;
-    }
-
-private:
-    sockaddr_in6 address;
-};
-
-class ServerSocketIPv4: public ServerSocket{
-public:    
-    ServerSocketIPv4(
-        int *opt_value,
-        int opt_name = TCP_NODELAY,
-        int level = SOL_TCP,
-        int domain = AF_INET,
-        int type = SOCK_STREAM
-    ): ServerSocket(opt_value, opt_name, level, domain, type){
-        address_len = sizeof(address);
-    }
-
-    void setAddress(
-        uint16_t port = PORT,
-        sa_family_t family = AF_INET,
-        in_addr_t _s_addr = INADDR_ANY
-    ){
-        address.sin_family = family;
-        address.sin_addr.s_addr = _s_addr;
-        address.sin_port = htons(port);
-    }
-
-    void bindSocket() override{
-        if (bind(socket_fd, (sockaddr*)&address, sizeof(address)) < 0)
-            std::cerr << "[ERROR] Fail to bind the socket" << std::endl;
-    }
-    
-    int connectToClient() override{
-        if (listen(socket_fd, 3) < 0)
-            std::cerr << "[ERROR] Fail to listen to clients" << std::endl;
-        client_socket_fd = accept(socket_fd, nullptr, nullptr);
-        if (client_socket_fd < 0)
-            std::cerr << "[ERROR] Fail to connect to the client" << std::endl;
-        return client_socket_fd;
-    }
-
-private:
-    sockaddr_in address;
-};
-
+// =================
+// CLIENT SOCKET
+// =================
 class ClientSocket: public Socket{
 public:
-    ClientSocket(
-        int domain,
-        int type    
-    ): Socket(domain, type) {}
-
-    virtual void setServerAddress(
-        const char* addr,
-        uint16_t port = PORT,
-        sa_family_t family = 0
-    ){
-        (void)(addr);
-        (void)(port);
-        (void)(family);
+    ClientSocket(ConnectionProtocol cp): Socket(cp) {
+        if (m_cp == ConnectionProtocol::IPV4)
+            address_len = sizeof(ipv4_server_address);
+        else
+            address_len = sizeof(ipv6_server_address);
     }
 
-    virtual void connectToServer(){}
+    void setServerAddress(const char* addr, sa_family_t family = 0) {
+
+        int result;
+        if (m_cp == ConnectionProtocol::IPV4) {
+            ipv4_server_address.sin_family = AF_INET;
+            ipv4_server_address.sin_port = htons(PORT);
+            result = inet_pton(AF_INET, addr, &ipv4_server_address.sin_addr.s_addr);
+        } else {
+            ipv6_server_address.sin6_family = AF_INET6;
+            ipv6_server_address.sin6_port = htons(PORT);
+            result = inet_pton(AF_INET6, addr, &ipv6_server_address.sin6_addr);   
+        }
+
+        if (result == 1)
+            std::clog << "[LOG] Successfully setted server address" << std::endl;
+        else if (result == 0)
+            std::cerr << "[ERROR] String is not a valid address" << std::endl;
+        if (result <= 0)
+            std::cerr << "[ERROR] Fail to set the server address" << std::endl;
+    
+    }
+
+    void connectToServer() {
+        int result;
+        if (m_cp == ConnectionProtocol::IPV4)
+            result = connect(socket_fd, (sockaddr*)&ipv4_server_address, sizeof(ipv4_server_address));
+        else
+            result = connect(socket_fd, (sockaddr*)&ipv6_server_address, sizeof(ipv6_server_address));
+
+        if (result == 0)
+            std::clog << "[LOG] Successfully connected to server" << std::endl;
+        else
+            std::cerr << "[ERROR] Fail to connect to server" << std::endl;
+
+    }
 
     ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
         return send(socket_fd, buffer, size_buffer, 0);
@@ -198,67 +186,8 @@ public:
 
 protected:
     socklen_t address_len;
-
-};
-
-class ClientSocketIPv6: public ClientSocket{
-public:
-    ClientSocketIPv6(
-        int domain = AF_INET6,
-        int type = SOCK_STREAM   
-    ): ClientSocket(domain, type){
-        address_len = sizeof(server_address);
-    }
-
-    void setServerAddress(
-        const char* addr,
-        uint16_t port,
-        sa_family_t family
-    ) override{
-        if(family == 0) family = AF_INET6;
-        server_address.sin6_family = family;
-        server_address.sin6_port = htons(port);
-        if (inet_pton(family, addr, &server_address.sin6_addr) <= 0)
-            std::cerr << "[ERROR] Fail to set the server address" << std::endl;       
-    }
-
-    void connectToServer() override{
-        if (connect(socket_fd, (sockaddr*)&server_address, sizeof(server_address)) < 0)
-            std::cerr << "[ERROR] Fail to connect to the server" << std::endl;
-    }
-
-private:
-    sockaddr_in6 server_address;
-};
-
-class ClientSocketIPv4: public ClientSocket{
-public:
-    ClientSocketIPv4(
-        int domain = AF_INET,
-        int type = SOCK_STREAM   
-    ): ClientSocket(domain, type){
-        address_len = sizeof(server_address);
-    }
-
-    void setServerAddress(
-        const char* addr,
-        uint16_t port,
-        sa_family_t family
-    ) override{
-        if(family == 0) family = AF_INET;
-        server_address.sin_family = family;
-        server_address.sin_port = htons(port);
-        if (inet_pton(family, addr, &server_address.sin_addr.s_addr) <= 0)
-            std::cerr << "[ERROR] Fail to set the server address" << std::endl;       
-    }
-
-    void connectToServer() override{
-        if (connect(socket_fd, (sockaddr*)&server_address, sizeof(server_address)) < 0)
-            std::cerr << "[ERROR] Fail to connect to the server" << std::endl;
-    }
-
-private:
-    sockaddr_in server_address;
+    sockaddr_in ipv4_server_address;
+    sockaddr_in6 ipv6_server_address;
 };
 
 #endif
