@@ -43,8 +43,8 @@ public:
 
     ConnectionProtocol protocol() { return m_cp; }
     ~Socket(){ CLOSE(socket_fd); }
-    virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer) = 0;
-    virtual ssize_t readBuffer(char *buffer, size_t size_buffer) = 0;
+    virtual ssize_t sendBuffer(const void* buffer, size_t size_buffer) = 0;
+    virtual ssize_t readBuffer(void *buffer, size_t size_buffer) = 0;
 
 protected:
     int socket_fd;
@@ -67,7 +67,7 @@ public:
         char *optvalue = (char*) _optvalue; 
         #else
         int _optvalue = 1;
-        int *optvalue = &opt_value;
+        int *optvalue = &_optvalue;
         #endif
 
         if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(int)) < 0)
@@ -123,11 +123,11 @@ public:
         }
     }
 
-    ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
+    ssize_t sendBuffer(const void* buffer, size_t size_buffer) override {
         return send(client_socket_fd, buffer, size_buffer, 0);
     }
  
-    ssize_t readBuffer(char *buffer, size_t size_buffer) override {
+    ssize_t readBuffer(void *buffer, size_t size_buffer) override {
         return recv(client_socket_fd, buffer, size_buffer, 0);
     }
 
@@ -189,11 +189,11 @@ public:
 
     }
 
-    ssize_t sendBuffer(const char* buffer, size_t size_buffer) override {
+    ssize_t sendBuffer(const void* buffer, size_t size_buffer) override {
         return send(socket_fd, buffer, size_buffer, 0);
     }
 
-    ssize_t readBuffer(char* buffer, size_t size_buffer) override {
+    ssize_t readBuffer(void* buffer, size_t size_buffer) override {
         return recv(socket_fd, buffer, size_buffer, 0);
     }
 

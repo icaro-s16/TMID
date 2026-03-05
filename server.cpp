@@ -5,6 +5,6 @@ int main(){
     serverSocket.setAddress();
     Server server(serverSocket);
     server.connectClient();
-    server.recvAllFilesFromClient("retorno");
+    server.sendAllFilesToClient("src");
     return 0;
 }
