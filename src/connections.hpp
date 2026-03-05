@@ -24,10 +24,9 @@ char* readAllBytes(std::string path){
     return bytes;
 }
 
-std::vector<std::string> getAllFilePath(std::string st_dir_path){
+std::vector<std::string> getAllFilePath(std::filesystem::path path){
     std::vector<std::string> filesPath;
-    std::filesystem::path dir_path(st_dir_path); 
-    for(auto entry: std::filesystem::directory_iterator(dir_path)){
+    for(auto entry: std::filesystem::directory_iterator(path)){
         if (entry.is_regular_file())
             filesPath.push_back(entry.path().string());
     }
@@ -36,10 +35,8 @@ std::vector<std::string> getAllFilePath(std::string st_dir_path){
 
 class Connection{
 protected:
-    void sendAllFiles(std::string dir_path, Socket& socket){
-        std::vector<std::string> filesPath = getAllFilePath(dir_path);
-        
-
+    void sendAllFiles(std::filesystem::path path, Socket& socket){
+        std::vector<std::string> filesPath = getAllFilePath(path);
         std::string lenOfFilesPath = std::to_string(filesPath.size());
         std::string sizeOflen = std::to_string(lenOfFilesPath.size());
 
@@ -190,8 +187,8 @@ public:
         sendFile(path, client);
     }
 
-    void sendAllFilesToServer(std::string dir){
-        sendAllFiles(dir, client);
+    void sendAllFilesToServer(std::filesystem::path path){
+        sendAllFiles(path, client);
     }
 
     void recvFilesFromServer(std::string path){
