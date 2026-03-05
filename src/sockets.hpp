@@ -72,7 +72,7 @@ public:
         int *optvalue = &opt_value;
         #endif
 
-        if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(int)) < 0)
+        if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(_optvalue)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
     }
 
