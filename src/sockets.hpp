@@ -30,16 +30,19 @@ enum class ConnectionProtocol { IPV4, IPV6 };
 class Socket{
 public:    
     Socket(ConnectionProtocol cp): m_cp(cp) {
-        if (m_cp == ConnectionProtocol::IPV4)
-            socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-        else
-            socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
+        int domain, type = SOCK_STREAM, protocol = 0;
 
+        if (m_cp == ConnectionProtocol::IPV4)
+            domain = AF_INET;
+        else
+            domain = AF_INET6;
+
+        socket_fd = socket(domain, type, protocol);
         if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
     }
 
     ConnectionProtocol protocol() { return m_cp; }
-    virtual ~Socket(){ CLOSE(socket_fd); }
+    ~Socket(){ CLOSE(socket_fd); }
     virtual ssize_t sendBuffer(const char* buffer, size_t size_buffer) = 0;
     virtual ssize_t readBuffer(char *buffer, size_t size_buffer) = 0;
 
@@ -67,12 +70,13 @@ public:
     ~ServerSocket(){ CLOSE(client_socket_fd); }
     
     void bindSocket() {
-        int result;
+        sockaddr *addr;
         if (m_cp == ConnectionProtocol::IPV4)
-            result = bind(socket_fd, (sockaddr*)&ipv4_address, sizeof(ipv4_address));
+            addr = (sockaddr*)&ipv4_address;
         else
-            result = bind(socket_fd, (sockaddr*)&ipv6_address, sizeof(ipv6_address));
+            addr = (sockaddr*)&ipv6_address;
 
+        int result = bind(socket_fd, addr, address_len);
         if (result < 0)
             std::cerr << "[ERROR] Fail to bind the socket" << std::endl;
         else
@@ -85,11 +89,13 @@ public:
         else
             std::clog << "[LOG] listening for clients..." << std::endl;
 
+        sockaddr *addr;
         if (m_cp == ConnectionProtocol::IPV4)
-            client_socket_fd = accept(socket_fd, (sockaddr*)&ipv4_address, &address_len);
+            addr = (sockaddr*)&ipv4_address;
         else
-            client_socket_fd = accept(socket_fd, nullptr, nullptr);
+            addr = (sockaddr*)&ipv6_address;
 
+        client_socket_fd = accept(socket_fd, addr, &address_len);
         if (client_socket_fd < 0)
             std::cerr << "[ERROR] Fail to connect to the client" << std::endl;
         else
@@ -161,11 +167,14 @@ public:
 
     void connectToServer() {
         int result;
-        if (m_cp == ConnectionProtocol::IPV4)
-            result = connect(socket_fd, (sockaddr*)&ipv4_server_address, sizeof(ipv4_server_address));
-        else
-            result = connect(socket_fd, (sockaddr*)&ipv6_server_address, sizeof(ipv6_server_address));
+        sockaddr *addr;
 
+        if (m_cp == ConnectionProtocol::IPV4)
+            addr = (sockaddr*)&ipv4_server_address;
+        else
+            addr = (sockaddr*)&ipv6_server_address;
+        
+        result = connect(socket_fd, addr, address_len);
         if (result == 0)
             std::clog << "[LOG] Successfully connected to server" << std::endl;
         else
