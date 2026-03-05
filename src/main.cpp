@@ -4,6 +4,7 @@
 #include "group_commands.hpp"
 #include "task_commands.hpp"
 #include "server.hpp"
+#include "client.hpp"
 
 int main(int argc, char* argv[]) {
 
@@ -32,19 +33,29 @@ int main(int argc, char* argv[]) {
     else if (command == "run")
     {
         /* create and host a group server... */
-        Server groupServer = Server();
+        IServer groupServer = IServer();
         groupServer.run();
     }
     else if (command == "send")
     {
+        IClient groupClient = IClient();
         std::clog << "[LOG] Validating files...\n";
         std::unique_ptr<Task> task = task::read_task_config();
         if (task::validate_required_files(*task)) {
-            std::clog << "[LOG] Sending \n";
+            std::clog << "[LOG] Sending files...\n";
         } else {
             std::clog << "[LOG] Missing required files.\n";
             std::cerr << "[ERROR] Send process aborted.\n";
+            return 0;
         }
+        
+        std::string ip = "127.0.0.1";
+        if (argc > 2)
+            std::string ip = argv[2];
+        // TODO: validate ip
+        std::string path = std::filesystem::current_path().string();
+
+        groupClient.run(ip);
     }
     else
     {
