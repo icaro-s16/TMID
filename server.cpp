@@ -1,10 +1,9 @@
 #include "src/connections.hpp"
 
 int main(){
-    int setOpt = 1;
-    ServerSocketIPv4 serverIPv4(&setOpt);
-    serverIPv4.setAddress();
-    Server server(serverIPv4);
+    ServerSocket serverSocket(ConnectionProtocol::IPV4);
+    serverSocket.setAddress();
+    Server server(serverSocket);
     server.connectClient();
     server.recvAllFilesFromClient("retorno");
     return 0;

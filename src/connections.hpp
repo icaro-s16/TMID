@@ -182,7 +182,7 @@ public:
     Client(ClientSocket &_client):client(_client){}
 
     void createClient(std::string ip){
-        client.setServerAddress(ip.c_str(), PORT);
+        client.setServerAddress(ip.c_str());
         client.connectToServer();
     }
 
