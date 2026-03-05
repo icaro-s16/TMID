@@ -6,6 +6,6 @@ int main(){
     serverIPv4.setAddress();
     Server server(serverIPv4);
     server.connectClient();
-    server.recvFilesFromClient("retorno.txt");
+    server.recvAllFilesFromClient("retorno");
     return 0;
 }
