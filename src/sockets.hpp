@@ -68,13 +68,13 @@ public:
         char *optvalue = (char*) &_optvalue; 
         #else
         int _optvalue = 1;
-        int *optvalue = &opt_value;
+        int *optvalue = &_optvalue;
         #endif
 
         if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(_optvalue)) < 0)
             std::cerr << "[ERROR] Fail to set socket options" << std::endl;
         else
-            std::clog << "[LOG] successfuly setted socket options" << std::endl;
+            std::clog << "[LOG] successfully setted socket options" << std::endl;
     }
 
     ~ServerSocket(){ CLOSE(client_socket_fd); }
