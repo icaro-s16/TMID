@@ -17,7 +17,7 @@ public:
         serverSocket.setAddress();
         Server server(serverSocket);
         server.connectClient();
-        server.recvAllFilesFromClient("retorno");
+        server.recvAllFilesFromClient();
 
         #if defined(_WIN32) || defined(_WIN64)
         WSACleanup();

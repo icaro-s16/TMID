@@ -65,22 +65,6 @@ protected:
 
     void recvAllFiles(Socket& socket){
         
-        char header[MAX_CHUNK_SIZE];
-        memset(header, 0, MAX_CHUNK_SIZE);
-
-        socket.readBuffer(header, MAX_CHUNK_SIZE);
-
-        int file_counter = headerAmountParser(header);
-
-        for(auto i = 0; i < file_counter; i++)
-            recvFile(socket);
-        
-    }
-
-    void sendFile(std::string path, Socket& socket){
-        std::vector<std::string> file_tokens = splitText(path, '/');
-        std::string fileName = file_tokens[file_tokens.size() - 1];
-        
         char _len;
         socket.readBuffer(&_len, 1);
         
