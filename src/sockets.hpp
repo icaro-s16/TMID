@@ -23,14 +23,28 @@
 #endif
 
 #include <iostream>
+#include "connection_protocol.hpp"
 
-enum class ConnectionProtocol { IPV4, IPV6 };
 // =================
 // SOCKET BASE CLASS
 // =================
 class Socket{
 public:
+    Socket(){}
     Socket(ConnectionProtocol cp): m_cp(cp) {
+        int domain, type = SOCK_STREAM, protocol = 0;
+
+        if (m_cp == ConnectionProtocol::IPV4)
+            domain = AF_INET;
+        else
+            domain = AF_INET6;
+
+        socket_fd = socket(domain, type, protocol);
+        if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
+    }
+
+    void setSocket(ConnectionProtocol cp){
+        m_cp = cp;
         int domain, type = SOCK_STREAM, protocol = 0;
 
         if (m_cp == ConnectionProtocol::IPV4)
@@ -146,7 +160,16 @@ protected:
 // =================
 class ClientSocket: public Socket{
 public:
+    ClientSocket(){}
     ClientSocket(ConnectionProtocol cp): Socket(cp) {
+        if (m_cp == ConnectionProtocol::IPV4)
+            address_len = sizeof(ipv4_server_address);
+        else
+            address_len = sizeof(ipv6_server_address);
+    }
+
+    void setIp(ConnectionProtocol cp){
+        setSocket(cp);
         if (m_cp == ConnectionProtocol::IPV4)
             address_len = sizeof(ipv4_server_address);
         else

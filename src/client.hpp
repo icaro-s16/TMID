@@ -1,4 +1,5 @@
 #include "connections.hpp"
+#include "regex.hpp"
 
 class IClient {
 public:
@@ -9,8 +10,14 @@ public:
             std::cerr << "[ERROR] Error at WSAStartup()\n";
         }
         #endif
+        
+        ConnectionProtocol ip_type = ipRegex(ip);
+        if (ip_type == ConnectionProtocol::UNDEF){
+            std::cerr << "[ERROR] Invalid IP\n";
+            return;
+        }
 
-        ClientSocket clientSocket(ConnectionProtocol::IPV4);
+        ClientSocket clientSocket(ip_type);
         Client client(clientSocket);
         client.createClient(ip);
         std::filesystem::path path = std::filesystem::current_path();
