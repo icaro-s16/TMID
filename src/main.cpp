@@ -63,10 +63,6 @@ int main(int argc, char* argv[]) {
             std::cerr << "[ERROR] Send process aborted.\n";
             return 0;
         }
-        
-        
-        std::string path = std::filesystem::current_path().string();
-
         groupClient.run(ip);
     }
     else
