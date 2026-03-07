@@ -64,17 +64,12 @@ protected:
     }
 
     void recvAllFiles(Socket& socket){
-        
-        char _len;
-        socket.readBuffer(&_len, 1);
-        
-        unsigned short len = _len - '0';
-        char* _file_counter = new char[len];
-
-        socket.readBuffer(_file_counter, len);
-
-        size_t file_counter = std::stoul(_file_counter);
-        delete[] _file_counter;
+        char buffer[MAX_CHUNK_SIZE];
+        size_t recvAmountSize = 0;
+        while(recvAmountSize < MAX_CHUNK_SIZE){
+            recvAmountSize += socket.readBuffer(buffer, MAX_CHUNK_SIZE);
+        }
+        size_t file_counter = headerAmountParser(buffer);
 
         for(auto i = 0; i < file_counter; i++)
             recvFile(socket);

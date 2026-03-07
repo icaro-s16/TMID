@@ -1,0 +1,7 @@
+# task's config file.
+# lines starting with '#' will be ignored by the system.
+
+# task name: usually the folder name
+task_name=
+# description: a good and descritive text for the task
+description=
