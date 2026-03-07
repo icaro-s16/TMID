@@ -46,7 +46,7 @@ public:
 
         ClientSocket clientSocket(m_cp);
         Client client(clientSocket);
-        client.createClient(ip);
+        if(!client.createClient(ip)) return;
 
         client.sendMsgToServer("s");
 

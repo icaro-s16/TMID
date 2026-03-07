@@ -203,9 +203,9 @@ class Client: public Connection{
 public:
     Client(ClientSocket &_client):client(_client){}
 
-    void createClient(std::string ip){
+    bool createClient(std::string ip){
         client.setServerAddress(ip.c_str());
-        client.connectToServer();
+        return client.connectToServer();
     }
 
     void sendFileToServer(std::string path){

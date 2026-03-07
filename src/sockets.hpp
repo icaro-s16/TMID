@@ -19,6 +19,8 @@
     #include <netinet/in.h>
     #include <netinet/tcp.h>
     #include <sys/time.h>
+    #include <poll.h>
+    #include <fcntl.h>
     #define ENABLE(a)(a)
     #define CLOSE(fd)(close(fd))
 #endif
@@ -199,7 +201,7 @@ public:
     
     }
 
-    void connectToServer() {
+    bool connectToServer() {
         int result;
         sockaddr *addr;
 
@@ -207,17 +209,14 @@ public:
             addr = (sockaddr*)&ipv4_server_address;
         else
             addr = (sockaddr*)&ipv6_server_address;
-        
-        
-
-        result = connect(socket_fd, addr, address_len);
-        if (result == 0)
-            std::clog << "[LOG] Successfully connected to server" << std::endl;
-        else
+        if (connectTimeOut(socket_fd, addr)){
             std::cerr << "[ERROR] Fail to connect to server" << std::endl;
-
+            return false;
+        }
+        std::clog << "[LOG] Successfully connected to server" << std::endl;
+        return true;
     }
-
+    
     ssize_t sendBuffer(const void* buffer, size_t size_buffer) override {
         return send(socket_fd, buffer, size_buffer, 0);
     }
@@ -227,6 +226,15 @@ public:
     }
 
 protected:
+    bool connectTimeOut(int socket_fd, sockaddr* addr){
+        // Two synRetries equiv 7 seconds
+        int synRetries = 2;
+        if(setsockopt(socket_fd, IPPROTO_TCP, TCP_SYNCNT, &synRetries, sizeof(synRetries)) < 0) return true;
+        if(connect(socket_fd, addr, address_len) < 0) return true;
+
+        return false;
+    }
+
     socklen_t address_len;
     sockaddr_in ipv4_server_address;
     sockaddr_in6 ipv6_server_address;

@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <vector>
 
@@ -35,14 +36,14 @@ int main(int argc, char* argv[]) {
             std::string ip = argv[2];
         // TODO: validate ip and identify the protocol for connection;
         IClient groupClient = IClient(cp);
-        /* fetch data from server... */
+        
         groupClient.update(ip);
         std::clog << "[LOG] Data successfully recieved from server.\n";
 
     }
     else if (command == "run")
     {
-        /* create and host a group server... */
+        
         IServer groupServer = IServer();
         groupServer.run();
     }
