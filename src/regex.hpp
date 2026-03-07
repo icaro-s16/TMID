@@ -16,25 +16,4 @@ int ipRegex(std::string ip){
     return UNDEF;
 }
 
-
-int main(){
-    std::string ip;
-    std::cin >> ip;
-    int ret = ipRegex(ip);
-    switch(ret){
-        case IPv4:
-            std::cout << "IPv4" << std::endl;
-            break;
-        case IPv6:
-            std::cout << "IPv6" << std::endl;
-            break;
-        default:
-            std::cout << "UNDEF" << std::endl;
-            break;
-    }
-    return 0;
-
-}
-
-
 #endif
