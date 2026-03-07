@@ -18,6 +18,7 @@
     #include <arpa/inet.h>
     #include <netinet/in.h>
     #include <netinet/tcp.h>
+    #include <sys/time.h>
     #define ENABLE(a)(a)
     #define CLOSE(fd)(close(fd))
 #endif
@@ -207,6 +208,8 @@ public:
         else
             addr = (sockaddr*)&ipv6_server_address;
         
+        
+
         result = connect(socket_fd, addr, address_len);
         if (result == 0)
             std::clog << "[LOG] Successfully connected to server" << std::endl;

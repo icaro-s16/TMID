@@ -49,9 +49,14 @@ int main(int argc, char* argv[]) {
     else if (command == "send")
     {
         std::string ip = "127.0.0.1";
-        ConnectionProtocol cp = ConnectionProtocol::IPV4;
         if (argc > 2)
-            std::string ip = argv[2];
+            ip = argv[2];
+
+        ConnectionProtocol cp = ipRegex(ip);
+        if (cp == ConnectionProtocol::UNDEF){
+            std::cerr << "[ERROR] Invalid IP\n";
+            return EXIT_FAILURE;
+        }
         // TODO: validate ip and identify the protocol for connection;
         IClient groupClient = IClient(cp);
         std::clog << "[LOG] Validating files...\n";
