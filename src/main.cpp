@@ -28,7 +28,17 @@ int main(int argc, char* argv[]) {
     }
     else if (command == "update")
     {
+        std::clog << "[LOG] Updating data...\n";
+        std::string ip = "127.0.0.1";
+        ConnectionProtocol cp = ConnectionProtocol::IPV4;
+        if (argc > 2)
+            std::string ip = argv[2];
+        // TODO: validate ip and identify the protocol for connection;
+        IClient groupClient = IClient(cp);
         /* fetch data from server... */
+        groupClient.update(ip);
+        std::clog << "[LOG] Data successfully recieved from server.\n";
+
     }
     else if (command == "run")
     {
@@ -38,7 +48,12 @@ int main(int argc, char* argv[]) {
     }
     else if (command == "send")
     {
-        IClient groupClient = IClient();
+        std::string ip = "127.0.0.1";
+        ConnectionProtocol cp = ConnectionProtocol::IPV4;
+        if (argc > 2)
+            std::string ip = argv[2];
+        // TODO: validate ip and identify the protocol for connection;
+        IClient groupClient = IClient(cp);
         std::clog << "[LOG] Validating files...\n";
         std::unique_ptr<Task> task = task::read_task_config();
         if (task::validate_required_files(*task)) {
@@ -49,10 +64,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         
-        std::string ip = "127.0.0.1";
-        if (argc > 2)
-            std::string ip = argv[2];
-        // TODO: validate ip
+        
         std::string path = std::filesystem::current_path().string();
 
         groupClient.run(ip);

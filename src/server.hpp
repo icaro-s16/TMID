@@ -12,13 +12,23 @@ public:
             std::cerr << "[ERROR] Error at WSAStartup()\n";
         }
         #endif
-
+        
         ServerSocket serverSocket(ConnectionProtocol::IPV4);
         serverSocket.setAddress();
         Server server(serverSocket);
         server.connectClient();
-        server.recvAllFilesFromClient();
 
+        std::string buffer = " ";
+        server.recvMsgFromClient(buffer);
+        std::cout << "connection type: " << buffer << "\n";
+        
+        if (buffer == "r")
+            server.recvAllFilesFromClient();
+        else if (buffer == "s") {
+            std::filesystem::path path = std::filesystem::current_path();
+            server.sendAllFilesToClient(path.string());
+        }
+        
         #if defined(_WIN32) || defined(_WIN64)
         WSACleanup();
         #endif
