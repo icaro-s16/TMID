@@ -11,7 +11,7 @@ std::string strutils::trim(const std::string& s) {
     return s.substr(start, end - start + 1);
 }
 
-std::vector<std::string> splitText(std::string text, char delimeter){
+std::vector<std::string> strutils::splitText(std::string text, char delimeter){
     std::vector<std::string> tokens;
     std::string token;
     token.clear();
@@ -26,4 +26,29 @@ std::vector<std::string> splitText(std::string text, char delimeter){
     if (token != "")
         tokens.push_back(token);
     return tokens;
+}
+
+char* fileutils::getBytesFromFile(std::string path) {
+    std::ifstream inFile(path, std::ios::binary | std::ios::ate);
+    if (!inFile.is_open()){
+        std::cerr << "[ERROR] Fail to open the file" << std::endl;
+        return nullptr;
+    }
+    std::ifstream::pos_type fileLen = inFile.tellg();
+    char* bytes = new char[(size_t)fileLen];
+    // Back to beginning of the file
+    inFile.seekg(0, std::ios::beg);
+    inFile.read(bytes, fileLen); 
+    inFile.close();
+    return bytes;
+}
+
+std::vector<std::string> fileutils::getFilesFromFolder(std::string st_dir_path) {
+    std::vector<std::string> filesPath;
+    std::filesystem::path dir_path(st_dir_path); 
+    for(auto entry: std::filesystem::directory_iterator(dir_path)){
+        if (entry.is_regular_file())
+            filesPath.push_back(entry.path().string());
+    }
+    return filesPath;
 }

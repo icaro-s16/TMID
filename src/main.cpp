@@ -29,7 +29,6 @@ int main(int argc, char* argv[]) {
     }
     else if (command == "update")
     {
-        std::clog << "[LOG] Updating data...\n";
         std::string ip = "127.0.0.1";
         ConnectionProtocol cp = ConnectionProtocol::IPV4;
         if (argc > 2)

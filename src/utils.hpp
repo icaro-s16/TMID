@@ -3,13 +3,21 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 
 #define WHITESPACE " \n\r\t\f\v"
 
 namespace strutils {
     std::string trim(const std::string& s);
+    std::vector<std::string> splitText(std::string text, char delimeter);
 }
 
-std::vector<std::string> splitText(std::string text, char delimeter);
+namespace fileutils {
+    char* getBytesFromFile(std::string path);
+    std::vector<std::string> getFilesFromFolder(std::string st_dir_path);
+}
+
 
 #endif
