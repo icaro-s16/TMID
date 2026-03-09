@@ -1,43 +1,11 @@
 #include "connections.hpp"
 #include "utils.hpp"
 
+/* header implementations */
 HeaderFile::HeaderFile(): name(""), bytesLen(0), checkSum(0){};
 
-void Connection::sendFiles(std::vector<std::string> paths, Socket& socket){
-    char header[MAX_CHUNK_SIZE];
-    memset(header, 0, MAX_CHUNK_SIZE);
-
-    sprintf(
-        header,
-        "Amount:%i\r\n\r\n",
-        paths.size()
-    );
-
-    socket.sendBuffer(header, MAX_CHUNK_SIZE);
-
-    for(std::string fileName: paths)
-        sendFile(fileName, socket);
-}
-
-void Connection::sendAllFiles(std::string dir_path, Socket& socket){
-    std::vector<std::string> paths = fileutils::getFilesFromFolder(dir_path);
-    sendFiles(paths, socket);
-}
-
-void Connection::recvAllFiles(Socket& socket){
-    char buffer[MAX_CHUNK_SIZE];
-    size_t recvAmountSize = 0;
-    while(recvAmountSize < MAX_CHUNK_SIZE){
-        recvAmountSize += socket.readBuffer(buffer, MAX_CHUNK_SIZE);
-    }
-    size_t file_counter = headerAmountParser(buffer);
-
-    for(auto i = 0; i < file_counter; i++)
-        recvFile(socket);
-    
-}
-
-void Connection::sendFile(std::string path, Socket& socket){
+/* connections implementations */
+void connection::sendFile(std::string path, Socket& socket){
     std::vector<std::string> file_tokens = strutils::splitText(path, '/');
     std::string fileName = file_tokens[file_tokens.size() - 1];
     
@@ -78,7 +46,7 @@ void Connection::sendFile(std::string path, Socket& socket){
     
 }
 
-void Connection::recvFile(Socket& socket){
+void connection::recvFile(Socket& socket){
     char header[MAX_CHUNK_SIZE];
     memset(header, 0, MAX_CHUNK_SIZE);
     size_t header_recv_bytes = 0;
@@ -119,15 +87,43 @@ void Connection::recvFile(Socket& socket){
     
 }
 
-ssize_t Connection::sendMsg(std::string msg, Socket& socket){
+void connection::sendFiles(std::vector<std::string> paths, Socket& socket){
+    char header[MAX_CHUNK_SIZE];
+    memset(header, 0, MAX_CHUNK_SIZE);
+
+    sprintf(
+        header,
+        "Amount:%i\r\n\r\n",
+        paths.size()
+    );
+
+    socket.sendBuffer(header, MAX_CHUNK_SIZE);
+
+    for(std::string fileName: paths)
+        sendFile(fileName, socket);
+}
+
+void connection::recvFiles(Socket& socket){
+    char buffer[MAX_CHUNK_SIZE];
+    size_t recvAmountSize = 0;
+    while(recvAmountSize < MAX_CHUNK_SIZE){
+        recvAmountSize += socket.readBuffer(buffer, MAX_CHUNK_SIZE);
+    }
+    size_t file_counter = headerAmountParser(buffer);
+
+    for(auto i = 0; i < file_counter; i++)
+        recvFile(socket);
+}
+
+ssize_t connection::sendMsg(std::string msg, Socket& socket){
     return socket.sendBuffer(&msg[0], msg.size());
 }
 
-ssize_t Connection::recvMsg(std::string &buffer, Socket& socket){
+ssize_t connection::recvMsg(std::string &buffer, Socket& socket){
     return socket.readBuffer(&buffer[0], buffer.size());
 }
 
-HeaderFile Connection::headerFileParser(char* header){
+HeaderFile connection::headerFileParser(char* header){
     HeaderFile header_values;
     char* line = strtok(header, "\r\n");
     while (line != nullptr){
@@ -146,7 +142,7 @@ HeaderFile Connection::headerFileParser(char* header){
     return header_values;
 }
 
-int Connection::headerAmountParser(char* header){
+int connection::headerAmountParser(char* header){
     char* delimeter = strchr(header, ':');
     if(delimeter != nullptr){
         delimeter[0] = '\0';
@@ -159,39 +155,40 @@ int Connection::headerAmountParser(char* header){
     return 0;
 }
 
-
+/* Client implementations */
 Client::Client(ClientSocket &_client):client(_client){}
 
 bool Client::createClient(std::string ip){
     client.setServerAddress(ip.c_str());
-    client.connectToServer();
+    return client.connectToServer();
+}\
+
+void Client::sendFile(std::string path){
+    connection::sendFile(path, client);
 }
 
-void Client::sendFileToServer(std::string path){
-    sendFile(path, client);
+void Client::sendFiles(std::vector<std::string> paths){
+    connection::sendFiles(paths, client);
 }
 
-void Client::sendAllFilesToServer(std::string dir){
-    sendAllFiles(dir, client);
+void Client::recvFile(){
+    connection::recvFile(client);
 }
 
-void Client::recvFileFromServer(){
-    recvFile(client);
+void Client::recvFiles(){
+    connection::recvFiles(client);
 }
 
-void Client::recvAllFilesFromServer(){
-    recvAllFiles(client);
+ssize_t Client::sendMsg(std::string msg){
+    return connection::sendMsg(msg, client);
 }
 
-ssize_t Client::sendMsgToServer(std::string msg){
-    return sendMsg(msg, client);
-}
-
-ssize_t Client::recvMsgFromServer(std::string &buffer){
-    return recvMsg(buffer, client);
+ssize_t Client::recvMsg(std::string &buffer){
+    return connection::recvMsg(buffer, client);
 }
 
 
+/* server implementations */
 Server::Server(ServerSocket& _server):server(_server){
     server.bindSocket();
 }
@@ -201,26 +198,26 @@ int Server::connectClient(){
 }
 
 void Server::sendFileToClient(std::string path){
-    
-    sendFile(path, server);
+    connection::sendFile(path, server);
 }
 
-void Server::sendAllFilesToClient(std::string dir){
-    sendAllFiles(dir, server);
+void Server::sendAllFilesToClient(std::string dir) {
+    std::vector<std::string> files = fileutils::getFilesFromFolder(dir);
+    connection::sendFiles(files, server);
 }
 
 void Server::recvFileFromClient(){
-    recvFile(server);
+    connection::recvFile(server);
 }
 
 void Server::recvAllFilesFromClient(){
-    recvAllFiles(server);
+    connection::recvFiles(server);
 }
 
 ssize_t Server::sendMsgToClient(std::string msg){
-    return sendMsg(msg, server);
+    return connection::sendMsg(msg, server);
 }
 
 ssize_t Server::recvMsgFromClient(std::string &buffer){
-    return recvMsg(buffer, server);
+    return connection::recvMsg(buffer, server);
 }

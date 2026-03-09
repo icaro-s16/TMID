@@ -17,39 +17,32 @@ struct HeaderFile{
     HeaderFile();
 };
 
-class Connection{
-protected:
-    void sendFiles(std::vector<std::string> paths, Socket& socket);
-    void sendAllFiles(std::string dir_path, Socket& socket);
-    void recvAllFiles(Socket& socket);
+namespace connection {
     void sendFile(std::string path, Socket& socket);
     void recvFile(Socket& socket);
+    void sendFiles(std::vector<std::string> paths, Socket& socket);
+    void recvFiles(Socket& socket);
     ssize_t sendMsg(std::string msg, Socket& socket);
     ssize_t recvMsg(std::string &buffer, Socket& socket);
-
-private:
     HeaderFile headerFileParser(char* header);
     int headerAmountParser(char* header);
 };
 
-// sendFiles
-// sendMessages
-
-class Client: public Connection{
+class Client {
 public:
     Client(ClientSocket &_client);
     bool createClient(std::string ip);
-    void sendFileToServer(std::string path);
-    void sendAllFilesToServer(std::string dir);
-    void recvFileFromServer();
-    void recvAllFilesFromServer();
-    ssize_t sendMsgToServer(std::string msg);
-    ssize_t recvMsgFromServer(std::string &buffer);
+    void sendFile(std::string path);
+    void sendFiles(std::vector<std::string> paths);
+    void recvFile();
+    void recvFiles();
+    ssize_t sendMsg(std::string msg);
+    ssize_t recvMsg(std::string &buffer);
 private:
     ClientSocket& client;
 };
 
-class Server: public Connection{
+class Server {
 public:
     Server(ServerSocket& _server);
     int connectClient();
