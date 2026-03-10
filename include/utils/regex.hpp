@@ -4,7 +4,7 @@
 #include <string>
 #include <regex>
 #include <iostream>
-#include "connection_protocol.hpp"
+#include "network/connection_protocol.hpp"
 
 
 ConnectionProtocol ipRegex(std::string ip){

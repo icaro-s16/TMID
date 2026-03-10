@@ -1,8 +1,4 @@
-#include "connections.hpp"
-#include "utils.hpp"
-
-/* header implementations */
-HeaderFile::HeaderFile(): name(""), bytesLen(0), checkSum(0){};
+#include "network/connections.hpp"
 
 /* connections implementations */
 void connection::sendFile(std::string path, Socket& socket){
@@ -30,14 +26,14 @@ void connection::sendFile(std::string path, Socket& socket){
         header_values.bytesLen
     );
 
-    socket.sendBuffer(&header, MAX_CHUNK_SIZE);
+    socket.send(&header, MAX_CHUNK_SIZE);
 
     size_t currentffSet = 0;
     size_t bytesRemaining = bytesLen;
 
     while(bytesRemaining > 0) {
         size_t chunkSize = (bytesRemaining >= MAX_CHUNK_SIZE)? MAX_CHUNK_SIZE : bytesRemaining; 
-        size_t sendBytes = socket.sendBuffer(&data[currentffSet], chunkSize);
+        size_t sendBytes = socket.send(&data[currentffSet], chunkSize);
         currentffSet += sendBytes;
         bytesRemaining -= sendBytes;
     }
@@ -53,12 +49,12 @@ void connection::recvFile(Socket& socket){
 
     while(header_recv_bytes < MAX_CHUNK_SIZE){
         
-        header_recv_bytes += socket.readBuffer(&header[header_recv_bytes], MAX_CHUNK_SIZE - header_recv_bytes);
+        header_recv_bytes += socket.recieve(&header[header_recv_bytes], MAX_CHUNK_SIZE - header_recv_bytes);
     
     }
 
     // This funtion destroy the char*
-    HeaderFile header_values = headerFileParser(header);
+    HeaderFile header_values = HeaderFile::parseHeaderFile(header);
 
     std::ofstream outFile(header_values.name, std::ios::binary);
     if (!outFile.is_open()){
@@ -72,7 +68,7 @@ void connection::recvFile(Socket& socket){
 
     while(bytesRemaining > 0){
         ssize_t requestSize = (bytesRemaining >= MAX_CHUNK_SIZE) ? MAX_CHUNK_SIZE : bytesRemaining;
-        ssize_t recvBytes = socket.readBuffer(&data[currentOffset],  requestSize);
+        ssize_t recvBytes = socket.recieve(&data[currentOffset],  requestSize);
         
         if (recvBytes <= 0) break;
 
@@ -97,7 +93,7 @@ void connection::sendFiles(std::vector<std::string> paths, Socket& socket){
         paths.size()
     );
 
-    socket.sendBuffer(header, MAX_CHUNK_SIZE);
+    socket.send(header, MAX_CHUNK_SIZE);
 
     for(std::string fileName: paths)
         sendFile(fileName, socket);
@@ -107,52 +103,20 @@ void connection::recvFiles(Socket& socket){
     char buffer[MAX_CHUNK_SIZE];
     size_t recvAmountSize = 0;
     while(recvAmountSize < MAX_CHUNK_SIZE){
-        recvAmountSize += socket.readBuffer(buffer, MAX_CHUNK_SIZE);
+        recvAmountSize += socket.recieve(buffer, MAX_CHUNK_SIZE);
     }
-    size_t file_counter = headerAmountParser(buffer);
+    size_t file_counter = HeaderFile::parseHeaderAmount(buffer);
 
     for(auto i = 0; i < file_counter; i++)
         recvFile(socket);
 }
 
 ssize_t connection::sendMsg(std::string msg, Socket& socket){
-    return socket.sendBuffer(&msg[0], msg.size());
+    return socket.send(&msg[0], msg.size());
 }
 
 ssize_t connection::recvMsg(std::string &buffer, Socket& socket){
-    return socket.readBuffer(&buffer[0], buffer.size());
-}
-
-HeaderFile connection::headerFileParser(char* header){
-    HeaderFile header_values;
-    char* line = strtok(header, "\r\n");
-    while (line != nullptr){
-        char* delimeter = strchr(line, ':');
-        if(delimeter != nullptr){
-            delimeter[0] = '\0';
-            char* label = line;
-            char* value = delimeter + 1;
-            if (strcmp(label, "Name") == 0)
-                header_values.name = value;
-            else if(strcmp(label, "FileSize") == 0)
-                header_values.bytesLen = std::stoul(value);
-        }
-        line = strtok(NULL, "\r\n");
-    }
-    return header_values;
-}
-
-int connection::headerAmountParser(char* header){
-    char* delimeter = strchr(header, ':');
-    if(delimeter != nullptr){
-        delimeter[0] = '\0';
-        char* label = header;
-        char* value = delimeter + 1;
-        if (strcmp(label, "Amount") == 0){
-            return std::stoul(value);
-        }
-    }
-    return 0;
+    return socket.recieve(&buffer[0], buffer.size());
 }
 
 /* Client implementations */
@@ -187,37 +151,11 @@ ssize_t Client::recvMsg(std::string &buffer){
     return connection::recvMsg(buffer, client);
 }
 
-
 /* server implementations */
 Server::Server(ServerSocket& _server):server(_server){
     server.bindSocket();
 }
 
-int Server::connectClient(){
-    return server.connectToClient();
-}
-
-void Server::sendFileToClient(std::string path){
-    connection::sendFile(path, server);
-}
-
-void Server::sendAllFilesToClient(std::string dir) {
-    std::vector<std::string> files = fileutils::getFilesFromFolder(dir);
-    connection::sendFiles(files, server);
-}
-
-void Server::recvFileFromClient(){
-    connection::recvFile(server);
-}
-
-void Server::recvAllFilesFromClient(){
-    connection::recvFiles(server);
-}
-
-ssize_t Server::sendMsgToClient(std::string msg){
-    return connection::sendMsg(msg, server);
-}
-
-ssize_t Server::recvMsgFromClient(std::string &buffer){
-    return connection::recvMsg(buffer, server);
+ClientSocket Server::connectClient(){
+    return server.listen();
 }

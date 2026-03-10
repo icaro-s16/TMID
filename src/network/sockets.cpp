@@ -1,9 +1,14 @@
-#include "sockets.hpp"
+#include "network/sockets.hpp"
 
 /* Socket implementations */
-Socket::Socket(){}
+Socket::Socket(ConnectionProtocol _cp, int _fd): m_cp(_cp), socket_fd(_fd) {
+    if (socket_fd == -1)
+        setSocket();
+}
 
-Socket::Socket(ConnectionProtocol cp): m_cp(cp) {
+Socket::~Socket(){ close(socket_fd); }
+
+void Socket::setSocket() {
     int domain, type = SOCK_STREAM, protocol = 0;
 
     if (m_cp == ConnectionProtocol::IPV4)
@@ -15,23 +20,13 @@ Socket::Socket(ConnectionProtocol cp): m_cp(cp) {
     if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
 }
 
-Socket::~Socket(){ CLOSE(socket_fd); }
-
-void Socket::setSocket(ConnectionProtocol cp){
-    m_cp = cp;
-    int domain, type = SOCK_STREAM, protocol = 0;
-
-    if (m_cp == ConnectionProtocol::IPV4)
-        domain = AF_INET;
-    else
-        domain = AF_INET6;
-
-    socket_fd = socket(domain, type, protocol);
-    if (socket_fd < 0) std::cerr << "[ERROR] Fail to create a socket" << std::endl;
+ssize_t Socket::send(const void* buffer, size_t size_buffer) {
+    return ::send(socket_fd, buffer, size_buffer, 0);
 }
 
-ConnectionProtocol Socket::getProtocol() { return m_cp; }
-
+ssize_t Socket::recieve(void *buffer, size_t size_buffer) {
+    return ::recv(socket_fd, buffer, size_buffer, 0);
+}
 
 /* ServerSocket implementations */
 ServerSocket::ServerSocket(ConnectionProtocol cp): Socket(cp) {
@@ -40,21 +35,12 @@ ServerSocket::ServerSocket(ConnectionProtocol cp): Socket(cp) {
     else
         address_len = sizeof(ipv6_address);
     
-    #if defined(_WIN32) || defined(_WIN64)
-    bool _optvalue = true;
-    char *optvalue = (char*) &_optvalue; 
-    #else
-    int _optvalue = 1;
-    int *optvalue = &_optvalue;
-    #endif
-
-    if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY,  optvalue, sizeof(_optvalue)) < 0)
+    int optvalue = 1;
+    if (setsockopt(socket_fd, SOL_TCP, TCP_NODELAY, &optvalue, sizeof(optvalue)) < 0)
         std::cerr << "[ERROR] Fail to set socket options" << std::endl;
     else
         std::clog << "[LOG] successfully setted socket options" << std::endl;
 }
-
-ServerSocket::~ServerSocket(){ CLOSE(client_socket_fd); }
 
 void ServerSocket::bindSocket() {
     sockaddr *addr;
@@ -70,8 +56,8 @@ void ServerSocket::bindSocket() {
         std::clog << "[LOG] Successfully binded socket" << std::endl;
 };
 
-int ServerSocket::connectToClient() {
-    if (listen(socket_fd, 3) < 0)
+ClientSocket ServerSocket::listen() {
+    if (::listen(socket_fd, 3) < 0)
         std::cerr << "[ERROR] Fail to listen for clients" << std::endl;
     else
         std::clog << "[LOG] listening for clients..." << std::endl;
@@ -82,13 +68,15 @@ int ServerSocket::connectToClient() {
     else
         addr = (sockaddr*)&ipv6_address;
 
-    client_socket_fd = accept(socket_fd, addr, &address_len);
-    if (client_socket_fd < 0)
+    int client_fd = accept(socket_fd, addr, &address_len);
+    if (client_fd < 0) {
         std::cerr << "[ERROR] Fail to connect to the client" << std::endl;
-    else
+        throw std::runtime_error("Failed to connect with client.");
+    } else
         std::clog << "[LOG] Successfully connected with client" << std::endl;
-
-    return client_socket_fd;
+    
+    ClientSocket clientSocket(m_cp, client_fd);
+    return clientSocket;
 };
 
 void ServerSocket::setAddress() {
@@ -103,33 +91,23 @@ void ServerSocket::setAddress() {
     }
 }
 
-ssize_t ServerSocket::sendBuffer(const void* buffer, size_t size_buffer) {
-    return send(client_socket_fd, buffer, size_buffer, 0);
-}
-
-ssize_t ServerSocket::readBuffer(void *buffer, size_t size_buffer) {
-    return recv(client_socket_fd, buffer, size_buffer, 0);
-}
-
 /* ClientSocket implementations */
-ClientSocket::ClientSocket(){}
-
-ClientSocket::ClientSocket(ConnectionProtocol cp): Socket(cp) {
+ClientSocket::ClientSocket(ConnectionProtocol cp, int _fd): Socket(cp, _fd) {
     if (m_cp == ConnectionProtocol::IPV4)
         address_len = sizeof(ipv4_server_address);
     else
         address_len = sizeof(ipv6_server_address);
 }
 
-void ClientSocket::setIp(ConnectionProtocol cp){
-    setSocket(cp);
+void ClientSocket::setIp(ConnectionProtocol cp) {
+    setSocket();
     if (m_cp == ConnectionProtocol::IPV4)
         address_len = sizeof(ipv4_server_address);
     else
         address_len = sizeof(ipv6_server_address);
 }
 
-void ClientSocket::setServerAddress(const char* addr, sa_family_t family = 0) {
+void ClientSocket::setServerAddress(const char* addr) {
 
     int result;
     if (m_cp == ConnectionProtocol::IPV4) {
@@ -167,19 +145,11 @@ bool ClientSocket::connectToServer() {
     return true;
 }
 
-ssize_t ClientSocket::sendBuffer(const void* buffer, size_t size_buffer) {
-    return send(socket_fd, buffer, size_buffer, 0);
-}
-
-ssize_t ClientSocket::readBuffer(void* buffer, size_t size_buffer) {
-    return recv(socket_fd, buffer, size_buffer, 0);
-}
-
-bool ClientSocket::connectTimeOut(int socket_fd, sockaddr* addr){
+bool ClientSocket::connectTimeOut(int socket_fd, sockaddr* addr) {
     // Two synRetries equiv 7 seconds
     int synRetries = 2;
     if(setsockopt(socket_fd, IPPROTO_TCP, TCP_SYNCNT, &synRetries, sizeof(synRetries)) < 0) return true;
-    if(connect(socket_fd, addr, address_len) < 0) return true;
+    if(::connect(socket_fd, addr, address_len) < 0) return true;
 
     return false;
 }

@@ -6,7 +6,7 @@
 #include <iostream>
 #include <regex>
 
-#include "task.hpp"
+#include "models/task.hpp"
 
 #define TASK_CONFIG_FILE_NAME ".task_config"
 

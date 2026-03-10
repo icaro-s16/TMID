@@ -1,5 +1,4 @@
-#include "group_commands.hpp"
-
+#include "commands/group_commands.hpp"
     
 void group::create_group_config_file()
 {

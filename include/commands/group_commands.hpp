@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "group.hpp"
+#include "models/group.hpp"
 
 #define GROUP_CONFIG_FILE_NAME ".group_config"
 

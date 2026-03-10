@@ -2,10 +2,10 @@
 #include <iostream>
 #include <vector>
 
-#include "group_commands.hpp"
-#include "task_commands.hpp"
-#include "server.hpp"
-#include "client.hpp"
+#include "commands/group_commands.hpp"
+#include "commands/task_commands.hpp"
+#include "network/server.hpp"
+#include "network/client.hpp"
 
 int main(int argc, char* argv[]) {
 

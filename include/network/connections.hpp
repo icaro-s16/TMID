@@ -5,17 +5,13 @@
 #include <vector>
 #include <fstream>
 #include <string.h>
-#include "utils.hpp"
-#include "sockets.hpp"
+
+#include "network/sockets.hpp"
+#include "utils/utils.hpp"
+#include "models/file.hpp"
+#include "models/data_header.hpp"
+
 #define MAX_CHUNK_SIZE 1024
-
-struct HeaderFile{
-    std::string name;
-    uint32_t bytesLen;
-    uint32_t checkSum;
-
-    HeaderFile();
-};
 
 namespace connection {
     void sendFile(std::string path, Socket& socket);
@@ -24,8 +20,6 @@ namespace connection {
     void recvFiles(Socket& socket);
     ssize_t sendMsg(std::string msg, Socket& socket);
     ssize_t recvMsg(std::string &buffer, Socket& socket);
-    HeaderFile headerFileParser(char* header);
-    int headerAmountParser(char* header);
 };
 
 class Client {
@@ -45,13 +39,7 @@ private:
 class Server {
 public:
     Server(ServerSocket& _server);
-    int connectClient();
-    void sendFileToClient(std::string path);
-    void sendAllFilesToClient(std::string dir);
-    void recvFileFromClient();
-    void recvAllFilesFromClient();
-    ssize_t sendMsgToClient(std::string msg);
-    ssize_t recvMsgFromClient(std::string &buffer);
+    ClientSocket connectClient();
 private:
     ServerSocket& server;
 };

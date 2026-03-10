@@ -1,15 +1,15 @@
+#ifndef _FILE_HPP
+#define _FILE_HPP
+
 #include <string>
 #include <vector>
-#include "utils.hpp"
-
-enum FileType {FOLDER, FILE};
+#include "utils/utils.hpp"
 
 class File {
 private:
     std::filesystem::path m_path;
-    FileType m_elementType;
     std::vector<char> m_data;
-
+    /* Will open the file located at m_path and read all binary data from it, storing the read values at m_data */
     void readBinaryData() {
         std::ifstream file(m_path, std::ios::binary);
         if (!file) throw std::runtime_error("Failed to open file to read binary data.");
@@ -21,15 +21,27 @@ private:
         m_data = std::vector<char>(bytes, bytes + fileLength);
     }
 
-
 public:
-    File(const std::filesystem::path& _p, FileType _e = FILE): m_path(_p), m_elementType(_e) {
-        if (m_elementType == FILE) {
-            readBinaryData();
-        } else {
-            m_data = {};
-        }
+
+    File(const std::filesystem::path& _p): m_path(_p) {
+        if (std::filesystem::is_regular_file(_p)) readBinaryData();
+        else m_data = {};
     }
+
+    File(File&& other) noexcept 
+        : m_path(std::move(other.m_path)),
+          m_data(std::move(other.m_data)) {}
+
+    File& operator=(File&& other) noexcept {
+        if (this != &other) {
+            m_path = std::move(other.m_path);
+            m_data = std::move(other.m_data);
+        }
+        return *this;
+    }
+
+    File(const File&) = default;
+    File& operator=(const File&) = default;
 
     void writeToFile(const std::filesystem::path& path) {
         std::ofstream file(path, std::ios::binary);
@@ -37,8 +49,9 @@ public:
         file.write(m_data.data(), m_data.size());
     }
 
-    const FileType& getElementType() { return m_elementType; }
     const std::vector<char>& getData() { return m_data; }
     const std::filesystem::path& getPath() { return m_path; }
 };
+
+#endif
 

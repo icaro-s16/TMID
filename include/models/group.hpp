@@ -7,7 +7,7 @@
 #include <string>
 #include <algorithm>
 
-#include "utils.hpp"
+#include "utils/utils.hpp"
 
 struct Group {
     std::string name;

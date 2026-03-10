@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "utils/utils.hpp"
 
 std::string strutils::trim(const std::string& s) {
     size_t start = s.find_first_not_of(WHITESPACE);
