@@ -1,44 +1,39 @@
 #include "network/connections.hpp"
 
 /* connections implementations */
-void connection::sendFile(std::string path, Socket& socket){
+void connection::sendFile(const std::string& path, Socket& socket) {
     std::vector<std::string> file_tokens = strutils::splitText(path, '/');
-    std::string fileName = file_tokens[file_tokens.size() - 1];
+    std::string fileName = file_tokens.back();
     
-    char* data = fileutils::getBytesFromFile(path);
-    if (!data) return;
-
-    const size_t bytesLen = strlen(data);
+    std::vector<char> fileData = fileutils::getBytesFromFile(path);
+    if (fileData.empty()) return; 
 
     HeaderFile header_values;
-    
     header_values.name = fileName;
-    header_values.bytesLen = bytesLen;
-    
+    header_values.bytesLen = fileData.size();
+
     char header[MAX_CHUNK_SIZE];
     memset(header, 0, MAX_CHUNK_SIZE);
 
-    // Create a template the Header Size to calculate the Check Sum
-    sprintf(
-        header,
-        "Name:%s\r\nFileSize:%i\r\n\r\n", 
-        header_values.name.c_str(), 
-        header_values.bytesLen
-    );
+    snprintf(header, MAX_CHUNK_SIZE, "Name:%s\r\nFileSize:%zu\r\n\r\n", 
+             header_values.name.c_str(), 
+             header_values.bytesLen);
 
-    socket.send(&header, MAX_CHUNK_SIZE);
+    socket.send(header, MAX_CHUNK_SIZE);
 
-    size_t currentffSet = 0;
-    size_t bytesRemaining = bytesLen;
+    size_t currentOffset = 0;
+    size_t bytesRemaining = header_values.bytesLen;
 
     while(bytesRemaining > 0) {
-        size_t chunkSize = (bytesRemaining >= MAX_CHUNK_SIZE)? MAX_CHUNK_SIZE : bytesRemaining; 
-        size_t sendBytes = socket.send(&data[currentffSet], chunkSize);
-        currentffSet += sendBytes;
-        bytesRemaining -= sendBytes;
+        size_t chunkSize = (bytesRemaining >= MAX_CHUNK_SIZE) ? MAX_CHUNK_SIZE : bytesRemaining; 
+        
+        ssize_t sentBytes = socket.send(fileData.data() + currentOffset, chunkSize);
+        
+        if (sentBytes <= 0) break;
+
+        currentOffset += sentBytes;
+        bytesRemaining -= sentBytes;
     }
-    memset(data, 0, bytesLen);
-    delete[] data;
     
 }
 
@@ -96,7 +91,7 @@ void connection::sendFiles(std::vector<std::string> paths, Socket& socket){
     socket.send(header, MAX_CHUNK_SIZE);
 
     for(std::string fileName: paths)
-        sendFile(fileName, socket);
+        connection::sendFile(fileName, socket);
 }
 
 void connection::recvFiles(Socket& socket){
@@ -108,7 +103,7 @@ void connection::recvFiles(Socket& socket){
     size_t file_counter = HeaderFile::parseHeaderAmount(buffer);
 
     for(auto i = 0; i < file_counter; i++)
-        recvFile(socket);
+        connection::recvFile(socket);
 }
 
 ssize_t connection::sendMsg(std::string msg, Socket& socket){
@@ -117,45 +112,4 @@ ssize_t connection::sendMsg(std::string msg, Socket& socket){
 
 ssize_t connection::recvMsg(std::string &buffer, Socket& socket){
     return socket.recieve(&buffer[0], buffer.size());
-}
-
-/* Client implementations */
-Client::Client(ClientSocket &_client):client(_client){}
-
-bool Client::createClient(std::string ip){
-    client.setServerAddress(ip.c_str());
-    return client.connectToServer();
-}\
-
-void Client::sendFile(std::string path){
-    connection::sendFile(path, client);
-}
-
-void Client::sendFiles(std::vector<std::string> paths){
-    connection::sendFiles(paths, client);
-}
-
-void Client::recvFile(){
-    connection::recvFile(client);
-}
-
-void Client::recvFiles(){
-    connection::recvFiles(client);
-}
-
-ssize_t Client::sendMsg(std::string msg){
-    return connection::sendMsg(msg, client);
-}
-
-ssize_t Client::recvMsg(std::string &buffer){
-    return connection::recvMsg(buffer, client);
-}
-
-/* server implementations */
-Server::Server(ServerSocket& _server):server(_server){
-    server.bindSocket();
-}
-
-ClientSocket Server::connectClient(){
-    return server.listen();
 }

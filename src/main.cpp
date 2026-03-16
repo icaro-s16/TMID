@@ -30,20 +30,19 @@ int main(int argc, char* argv[]) {
     else if (command == "update")
     {
         std::string ip = "127.0.0.1";
-        ConnectionProtocol cp = ConnectionProtocol::IPV4;
         if (argc > 2)
             std::string ip = argv[2];
-        // TODO: validate ip and identify the protocol for connection;
-        IClient groupClient = IClient(cp);
+        Client groupClient = Client(ip);
         
-        groupClient.update(ip);
+        groupClient.update();
         std::clog << "[LOG] Data successfully recieved from server.\n";
 
     }
     else if (command == "run")
     {
-        
-        IServer groupServer = IServer();
+
+        /* Connection protocol is hardcoded for now. Change it latter. */
+        Server groupServer = Server(ConnectionProtocol::IPV4);
         groupServer.run();
     }
     else if (command == "send")
@@ -52,13 +51,7 @@ int main(int argc, char* argv[]) {
         if (argc > 2)
             ip = argv[2];
 
-        ConnectionProtocol cp = ipRegex(ip);
-        if (cp == ConnectionProtocol::UNDEF){
-            std::cerr << "[ERROR] Invalid IP\n";
-            return EXIT_FAILURE;
-        }
-        // TODO: validate ip and identify the protocol for connection;
-        IClient groupClient = IClient(cp);
+        Client groupClient = Client(ip);
         std::clog << "[LOG] Validating files...\n";
         std::unique_ptr<Task> task = task::read_task_config();
         if (task::validate_required_files(*task)) {
@@ -68,12 +61,10 @@ int main(int argc, char* argv[]) {
             std::cerr << "[ERROR] Send process aborted.\n";
             return 0;
         }
-        groupClient.run(ip);
+        groupClient.run();
     }
     else
     {
         std::cout << "command not found.\n";
     }
-    
-    return 0;
 }

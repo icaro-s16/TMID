@@ -39,8 +39,6 @@ struct HeaderFile{
         }
         return 0;
     }
-
-
 };
 
 #endif

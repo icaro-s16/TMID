@@ -1,28 +1,41 @@
-#include "models/group.hpp"
 #include "network/connections.hpp"
+#include <iostream>
+#include <string>
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
 
-class IServer {
-    std::unique_ptr<Group> m_group;
+class Server {
 public:
-    IServer(): m_group(group::read_group_config()) {}
-    void run() {
-        ServerSocket serverSocket(ConnectionProtocol::IPV4);
-        serverSocket.setAddress();
-        Server server(serverSocket);
+    Server(ConnectionProtocol cp) 
+        : m_group(group::read_group_config()), 
+          m_serverSocket(cp)
+    {
+        m_serverSocket.setAddress();
         
-        auto _client = server.connectClient();
-        Client client(_client);
-        std::string buffer = " ";
-        
-        client.recvMsg(buffer);
-        std::cout << "connection type: " << buffer << "\n";
-        
-        if (buffer == "r")
-            client.recvFiles();
-        else if (buffer == "s") {
-            std::filesystem::path path = std::filesystem::current_path();
-            auto files = fileutils::getFilesFromFolder(path);
-            client.sendFiles(files);
+        if (!m_serverSocket.bindSocket()) {
+            throw std::runtime_error("Failed to bind the server socket.");
         }
     }
+
+    void run() {
+        ClientSocket clientSocket = m_serverSocket.listen();
+        std::string buffer = " ";
+        
+        connection::recvMsg(buffer, clientSocket);
+        std::cout << "connection type: '" << buffer << "'\n";
+        
+        if (buffer == "r") {
+            connection::recvFiles(clientSocket);
+        } else if (buffer == "s") {
+            std::filesystem::path path = std::filesystem::current_path();
+            connection::sendFiles(fileutils::getFilesFromFolder(path), clientSocket);
+        } else {
+            std::cerr << "[WARNING] Unknown connection type received: " << buffer << "\n";
+        }
+    }
+
+private:
+    std::unique_ptr<Group> m_group;
+    ServerSocket m_serverSocket;
 };

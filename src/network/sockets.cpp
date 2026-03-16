@@ -42,7 +42,7 @@ ServerSocket::ServerSocket(ConnectionProtocol cp): Socket(cp) {
         std::clog << "[LOG] successfully setted socket options" << std::endl;
 }
 
-void ServerSocket::bindSocket() {
+bool ServerSocket::bindSocket() {
     sockaddr *addr;
     if (m_cp == ConnectionProtocol::IPV4)
         addr = (sockaddr*)&ipv4_address;
@@ -50,10 +50,7 @@ void ServerSocket::bindSocket() {
         addr = (sockaddr*)&ipv6_address;
 
     int result = bind(socket_fd, addr, address_len);
-    if (result < 0)
-        std::cerr << "[ERROR] Fail to bind the socket" << std::endl;
-    else
-        std::clog << "[LOG] Successfully binded socket" << std::endl;
+    return !(result < 0);
 };
 
 ClientSocket ServerSocket::listen() {
@@ -95,16 +92,9 @@ void ServerSocket::setAddress() {
 ClientSocket::ClientSocket(ConnectionProtocol cp, int _fd): Socket(cp, _fd) {
     if (m_cp == ConnectionProtocol::IPV4)
         address_len = sizeof(ipv4_server_address);
-    else
+    else if (m_cp == ConnectionProtocol::IPV4)
         address_len = sizeof(ipv6_server_address);
-}
-
-void ClientSocket::setIp(ConnectionProtocol cp) {
-    setSocket();
-    if (m_cp == ConnectionProtocol::IPV4)
-        address_len = sizeof(ipv4_server_address);
-    else
-        address_len = sizeof(ipv6_server_address);
+    else throw std::runtime_error("IP protocol in use is undefined.");
 }
 
 void ClientSocket::setServerAddress(const char* addr) {

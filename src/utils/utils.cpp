@@ -28,19 +28,19 @@ std::vector<std::string> strutils::splitText(std::string text, char delimeter){
     return tokens;
 }
 
-char* fileutils::getBytesFromFile(std::string path) {
-    std::ifstream inFile(path, std::ios::binary | std::ios::ate);
-    if (!inFile.is_open()){
-        std::cerr << "[ERROR] Fail to open the file" << std::endl;
-        return nullptr;
+std::vector<char> fileutils::getBytesFromFile(const std::string& path) {
+    // Open in binary mode and seek to the end immediately to get the size
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) return {}; 
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg); // Rewind to the start
+
+    std::vector<char> buffer(size);
+    if (file.read(buffer.data(), size)) {
+        return buffer;
     }
-    std::ifstream::pos_type fileLen = inFile.tellg();
-    char* bytes = new char[(size_t)fileLen];
-    // Back to beginning of the file
-    inFile.seekg(0, std::ios::beg);
-    inFile.read(bytes, fileLen); 
-    inFile.close();
-    return bytes;
+    return {}; // Return empty vector if the read fails
 }
 
 std::vector<std::string> fileutils::getFilesFromFolder(std::string st_dir_path) {

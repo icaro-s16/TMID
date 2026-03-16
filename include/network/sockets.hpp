@@ -38,7 +38,6 @@ protected:
 class ClientSocket: public Socket {
 public:
     ClientSocket(ConnectionProtocol cp, int _fd = -1);
-    void setIp(ConnectionProtocol cp);
     void setServerAddress(const char* addr);
     bool connectToServer();
 private:
@@ -51,7 +50,7 @@ private:
 class ServerSocket: public Socket{
 public:
     ServerSocket(ConnectionProtocol cp);
-    void bindSocket();
+    bool bindSocket();
     ClientSocket listen();
     void setAddress();
 private:
