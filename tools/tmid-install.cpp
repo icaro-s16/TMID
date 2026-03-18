@@ -44,7 +44,7 @@ bool install_tmid(const std::filesystem::path& binary_path) {
 #endif
 
 int main() {
-    std::filesystem::path project_root = std::filesystem::current_path();
+    std::filesystem::path project_root = std::filesystem::current_path().parent_path();
     std::filesystem::path tmid_binary = project_root / "build" / "tmid";
 
 #if defined(_WIN32) || defined(_WIN64)
