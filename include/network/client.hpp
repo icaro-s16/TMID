@@ -17,7 +17,7 @@ public:
         m_socket.setServerAddress(m_ip.c_str());
     }
     
-    void run() {
+    void sendTaskFiles() {
         if (!m_socket.connectToServer()) {
             throw std::runtime_error("[ERROR] Failed to connect to server at " + m_ip);
         }
@@ -25,10 +25,11 @@ public:
         connection::sendMsg("r", m_socket); // "server, Recieve those files from client"
         
         std::filesystem::path path = std::filesystem::current_path();
-        connection::sendFiles(fileutils::getFilesFromFolder(path), m_socket);
+        auto files = fileutils::getFilesFromFolder(path);
+        connection::sendFiles(files, m_socket);
     }
 
-    void update() {
+    void updateLocalFiles() {
         connection::sendMsg("s", m_socket); // "please, server, Send files to me"
         connection::recvFiles(m_socket);
     }

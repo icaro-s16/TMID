@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[]) {
 
-    // MAIN TEMPORARIO: Trocar por uma logica de chamamento de comandos mais robusta
+    // temporary main: Will be replaced with something more sturdy
     if (argc < 2)
         return 1;
 
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
             std::string ip = argv[2];
         Client groupClient = Client(ip);
         
-        groupClient.update();
+        groupClient.updateLocalFiles();
         std::clog << "[LOG] Data successfully recieved from server.\n";
 
     }
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "[ERROR] Send process aborted.\n";
             return 0;
         }
-        groupClient.run();
+        groupClient.sendTaskFiles();
     }
     else
     {
