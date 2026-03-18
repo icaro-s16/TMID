@@ -28,27 +28,33 @@ std::vector<std::string> strutils::splitText(std::string text, char delimeter){
     return tokens;
 }
 
-std::vector<char> fileutils::getBytesFromFile(const std::string& path) {
-    // Open in binary mode and seek to the end immediately to get the size
+std::vector<char> fileutils::getBytesFromFile(const std::filesystem::path& path) {
+    
+    if (std::filesystem::directory_entry(path).is_directory())
+    throw std::runtime_error("path given for reading bytes is a directory, not a file.");
+
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) return {}; 
 
     std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg); // Rewind to the start
+    file.seekg(0, std::ios::beg);
 
     std::vector<char> buffer(size);
     if (file.read(buffer.data(), size)) {
         return buffer;
     }
-    return {}; // Return empty vector if the read fails
+    return {};
 }
 
-std::vector<std::string> fileutils::getFilesFromFolder(std::string st_dir_path) {
-    std::vector<std::string> filesPath;
+std::vector<std::filesystem::path> fileutils::getFilesFromFolder(const std::filesystem::path &st_dir_path) {
+    
+    std::vector<std::filesystem::path> paths;
     std::filesystem::path dir_path(st_dir_path); 
-    for(auto entry: std::filesystem::directory_iterator(dir_path)){
+    
+    for(auto entry: std::filesystem::directory_iterator(dir_path)) {
         if (entry.is_regular_file())
-            filesPath.push_back(entry.path().string());
+        paths.push_back(entry);
     }
-    return filesPath;
+
+    return paths;
 }

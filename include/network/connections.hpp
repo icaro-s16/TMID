@@ -14,9 +14,9 @@
 #define MAX_CHUNK_SIZE 1024
 
 namespace connection {
-    void sendFile(const std::string& path, Socket& socket);
+    void sendFile(const std::filesystem::path& path, Socket& socket);
     void recvFile(Socket& socket);
-    void sendFiles(std::vector<std::string> paths, Socket& socket);
+    void sendFiles(std::vector<std::filesystem::path> paths, Socket& socket);
     void recvFiles(Socket& socket);
     ssize_t sendMsg(std::string msg, Socket& socket);
     ssize_t recvMsg(std::string &buffer, Socket& socket);

@@ -1,9 +1,8 @@
 #include "network/connections.hpp"
 
 /* connections implementations */
-void connection::sendFile(const std::string& path, Socket& socket) {
-    std::vector<std::string> file_tokens = strutils::splitText(path, '/');
-    std::string fileName = file_tokens.back();
+void connection::sendFile(const std::filesystem::path& path, Socket& socket) {
+    std::string fileName = path.filename();
     
     std::vector<char> fileData = fileutils::getBytesFromFile(path);
     if (fileData.empty()) return; 
@@ -78,7 +77,7 @@ void connection::recvFile(Socket& socket){
     
 }
 
-void connection::sendFiles(std::vector<std::string> paths, Socket& socket){
+void connection::sendFiles(std::vector<std::filesystem::path> paths, Socket& socket){
     char header[MAX_CHUNK_SIZE];
     memset(header, 0, MAX_CHUNK_SIZE);
 
@@ -90,8 +89,8 @@ void connection::sendFiles(std::vector<std::string> paths, Socket& socket){
 
     socket.send(header, MAX_CHUNK_SIZE);
 
-    for(std::string fileName: paths)
-        connection::sendFile(fileName, socket);
+    for(std::filesystem::path path: paths)
+        connection::sendFile(path, socket);
 }
 
 void connection::recvFiles(Socket& socket){
