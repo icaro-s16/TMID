@@ -1,12 +1,14 @@
-#include "network/connections.hpp"
-#include "utils/regex.hpp"
+#ifndef _CLIENT_HPP
+#define _CLIENT_HPP
 
-#include "network/connections.hpp"
-#include "utils/regex.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <utility>
 #include <filesystem>
+
+#include "network/connections.hpp"
+#include "utils/regex.hpp"
+#include "models/task.hpp"
 
 class Client {
 public:
@@ -29,9 +31,25 @@ public:
         connection::sendFiles(files, m_socket);
     }
 
+    // TODO: not doing what is suposed to do
+    void getGroupTasks(std::map<Task, std::vector<char>>& tasks) {
+        if (!m_socket.connectToServer())
+            throw std::runtime_error("[ERROR] Failed to connect to server at " + m_ip);
+        
+        connection::sendMsg(Op::SYNC, m_socket);
+        
+        std::map<std::string, std::vector<char>> files;
+        connection::recvFiles(files, m_socket);
+
+        
+        for (auto file : files) {
+            Task newTask(file.first, "", {});
+            tasks[newTask] = file.second;
+        }
+    }
+
     void updateLocalFiles() {
-        connection::sendMsg("s", m_socket); // "please, server, Send files to me"
-        connection::recvFiles(m_socket);
+        // LEGACY. Remove this later
     }
 
 private:
@@ -46,3 +64,5 @@ private:
     std::string m_ip; 
     ClientSocket m_socket;
 };
+
+#endif

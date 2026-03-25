@@ -58,3 +58,16 @@ std::vector<std::filesystem::path> fileutils::getFilesFromFolder(const std::file
 
     return paths;
 }
+
+std::vector<std::filesystem::path> fileutils::getFoldersFromFolder(const std::filesystem::path &st_dir_path) {
+    
+    std::vector<std::filesystem::path> paths;
+    std::filesystem::path dir_path(st_dir_path); 
+    
+    for(auto entry: std::filesystem::directory_iterator(dir_path)) {
+        if (!entry.is_directory())
+        paths.push_back(entry);
+    }
+
+    return paths;
+}

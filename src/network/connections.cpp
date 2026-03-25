@@ -36,45 +36,37 @@ void connection::sendFile(const std::filesystem::path& path, Socket& socket) {
     
 }
 
-void connection::recvFile(Socket& socket){
+void connection::recvFile(std::pair<std::string, std::vector<char>> &file, Socket& socket) {
+    std::clog << "recieving file...\n";
     char header[MAX_CHUNK_SIZE];
     memset(header, 0, MAX_CHUNK_SIZE);
     size_t header_recv_bytes = 0;
 
     while(header_recv_bytes < MAX_CHUNK_SIZE){
-        
         header_recv_bytes += socket.recieve(&header[header_recv_bytes], MAX_CHUNK_SIZE - header_recv_bytes);
-    
     }
 
     // This funtion destroy the char*
     HeaderFile header_values = HeaderFile::parseHeaderFile(header);
 
-    std::ofstream outFile(header_values.name, std::ios::binary);
-    if (!outFile.is_open()){
-        std::cerr << "[ERROR] Fail to open the file" << std::endl;
-        return;
-    }
 
-    char* data = new char[header_values.bytesLen];
+    std::vector<char> data(header_values.bytesLen);
     std::size_t bytesRemaining = header_values.bytesLen;
     std::size_t currentOffset = 0;
 
     while(bytesRemaining > 0){
         ssize_t requestSize = (bytesRemaining >= MAX_CHUNK_SIZE) ? MAX_CHUNK_SIZE : bytesRemaining;
-        ssize_t recvBytes = socket.recieve(&data[currentOffset],  requestSize);
+        ssize_t recvBytes = socket.recieve(&data.data()[currentOffset],  requestSize);
         
         if (recvBytes <= 0) break;
 
         currentOffset += recvBytes;
         bytesRemaining -= recvBytes;
     }
-
-    outFile.write(data, (std::streamsize) header_values.bytesLen);
-    outFile.close();
-    memset(data, 0, header_values.bytesLen);
-    delete[] data;
-    
+    // memset(data, 0, header_values.bytesLen);
+    file.first = header_values.name;
+    file.second = data; 
+    std::clog << "done recieving file...\n";
 }
 
 void connection::sendFiles(std::vector<std::filesystem::path> paths, Socket& socket){
@@ -93,16 +85,19 @@ void connection::sendFiles(std::vector<std::filesystem::path> paths, Socket& soc
         connection::sendFile(path, socket);
 }
 
-void connection::recvFiles(Socket& socket){
+void connection::recvFiles(std::map<std::string, std::vector<char>> &files, Socket &socket) {
     char buffer[MAX_CHUNK_SIZE];
     size_t recvAmountSize = 0;
-    while(recvAmountSize < MAX_CHUNK_SIZE){
+    while(recvAmountSize < MAX_CHUNK_SIZE) {
         recvAmountSize += socket.recieve(buffer, MAX_CHUNK_SIZE);
     }
     size_t file_counter = HeaderFile::parseHeaderAmount(buffer);
 
-    for(auto i = 0; i < file_counter; i++)
-        connection::recvFile(socket);
+    for(auto i = 0; i < file_counter; i++) {
+        std::pair<std::string, std::vector<char>> file;
+        connection::recvFile(file, socket);
+        files[file.first] = file.second;   
+    }
 }
 
 ssize_t connection::sendMsg(std::string msg, Socket& socket){

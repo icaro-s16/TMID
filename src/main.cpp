@@ -2,10 +2,9 @@
 #include <iostream>
 #include <vector>
 
-#include "commands/group_commands.hpp"
-#include "commands/task_commands.hpp"
 #include "network/server.hpp"
 #include "network/client.hpp"
+#include "commands/commands.hpp"
 
 int main(int argc, char* argv[]) {
 
@@ -18,15 +17,10 @@ int main(int argc, char* argv[]) {
     if (command == "create")
     {
         std::string arg = argv[2];
-        if (arg == "group")
-        {
-            group::create_group_config_file();
-        }
-        else if(arg == "task")
-        {
-            task::create_task_config_file();
-        }
+        if      (arg == "group") commands::createGroup();
+        else if (arg == "task") commands::createTask();
     }
+    else if (command == "sync") commands::syncToGroup();
     else if (command == "update")
     {
         std::string ip = "127.0.0.1";
@@ -40,10 +34,10 @@ int main(int argc, char* argv[]) {
     }
     else if (command == "run")
     {
-
+        commands::hostGroup();
         /* Connection protocol is hardcoded for now. Change it latter. */
-        Server groupServer = Server(ConnectionProtocol::IPV4);
-        groupServer.run();
+        // Server groupServer = Server(ConnectionProtocol::IPV4);
+        // groupServer.run();
     }
     else if (command == "send")
     {
@@ -52,15 +46,6 @@ int main(int argc, char* argv[]) {
             ip = argv[2];
 
         Client groupClient = Client(ip);
-        std::clog << "[LOG] Validating files...\n";
-        std::unique_ptr<Task> task = task::read_task_config();
-        if (task::validate_required_files(*task)) {
-            std::clog << "[LOG] Sending files...\n";
-        } else {
-            std::clog << "[LOG] Missing required files.\n";
-            std::cerr << "[ERROR] Send process aborted.\n";
-            return 0;
-        }
         groupClient.sendTaskFiles();
     }
     else

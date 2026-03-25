@@ -1,15 +1,18 @@
-#include "network/connections.hpp"
+#ifndef _SERVER_HPP
+#define _SERVER_HPP
+
 #include <iostream>
 #include <string>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
 
+#include "models/group.hpp"
+#include "network/connections.hpp"
+
 class Server {
 public:
-    Server(ConnectionProtocol cp) 
-        : m_group(group::read_group_config()), 
-          m_serverSocket(cp)
+    Server(ConnectionProtocol cp): m_serverSocket(cp)
     {
         m_serverSocket.setAddress();
         
@@ -18,24 +21,37 @@ public:
         }
     }
 
-    void run() {
+    void run(const Group& group)
+    {
+        std::cout << "server: " << group.m_name << "[" << group.m_alias << "]" << std::endl;
         ClientSocket clientSocket = m_serverSocket.listen();
-        std::string buffer = " ";
         
+        std::string buffer = "0000"; // TODO: Change this later. 4 byte messages
+        std::map<std::string, std::vector<char>> files = {};
+
         connection::recvMsg(buffer, clientSocket);
+
         std::cout << "connection type: '" << buffer << "'\n";
         
-        if (buffer == "r") {
-            connection::recvFiles(clientSocket);
-        } else if (buffer == "s") {
-            std::filesystem::path path = std::filesystem::current_path();
-            connection::sendFiles(fileutils::getFilesFromFolder(path), clientSocket);
+        if (buffer == Op::SUBMIT) {
+            connection::recvFiles(files, clientSocket);
+
+        } else if (buffer == Op::SYNC) {
+            std::filesystem::path path = OWNED_GROUPS_FOLDER / group.m_alias;
+            auto tasksFolders = fileutils::getFoldersFromFolder(path);
+            
+            for (auto folder : tasksFolders) {
+                auto taskContent = fileutils::getFilesFromFolder(folder);
+                connection::sendFiles(taskContent, clientSocket);
+            }
         } else {
             std::cerr << "[WARNING] Unknown connection type received: " << buffer << "\n";
         }
+
     }
 
 private:
-    std::unique_ptr<Group> m_group;
     ServerSocket m_serverSocket;
 };
+
+#endif

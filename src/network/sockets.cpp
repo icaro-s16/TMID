@@ -114,9 +114,8 @@ void ClientSocket::setServerAddress(const char* addr) {
         std::clog << "[LOG] Successfully setted server address" << std::endl;
     else if (result == 0)
         std::cerr << "[ERROR] String is not a valid address" << std::endl;
-    if (result <= 0)
+    else if (result <= 0)
         std::cerr << "[ERROR] Fail to set the server address" << std::endl;
-
 }
 
 bool ClientSocket::connectToServer() {

@@ -17,6 +17,8 @@ namespace strutils {
 namespace fileutils {
     std::vector<char> getBytesFromFile(const std::filesystem::path& path);
     std::vector<std::filesystem::path> getFilesFromFolder(const std::filesystem::path &st_dir_path);
+    std::vector<std::filesystem::path> getFoldersFromFolder(const std::filesystem::path &st_dir_path);
+
 }
 
 
